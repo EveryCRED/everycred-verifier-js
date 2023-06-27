@@ -1,0 +1,25 @@
+"use strict";
+exports.__esModule = true;
+exports.Messages = void 0;
+var Messages;
+(function (Messages) {
+    Messages["TYPE_KEY_VALIDATE"] = "Checking Credential type...";
+    Messages["TYPE_KEY_SUCCESS"] = "Credential type key is present in the credential with valid data.";
+    Messages["TYPE_KEY_ERROR"] = "Credential type key is not present or having invalid data in the credential.";
+    Messages["CONTEXT_KEY_VALIDATE"] = "Checking credential @context...";
+    Messages["CONTEXT_KEY_SUCCESS"] = "Credential @context key is present in the credential with valid data.";
+    Messages["CONTEXT_KEY_ERROR"] = "Credential @context key is not present or having invalid data in the credential.";
+    Messages["ID_KEY_VALIDATE"] = "Checking credential id...";
+    Messages["ID_KEY_SUCCESS"] = "Credential id key is present in the credential with valid data.";
+    Messages["ID_KEY_ERROR"] = "Credential id key is not present or having invalid data in the credential.";
+    Messages["CREDENTIAL_SUBJECT_KEY_VALIDATE"] = "Checking credential credentialSubject...";
+    Messages["CREDENTIAL_SUBJECT_KEY_SUCCESS"] = "Credential credential subject key is present in the certificate with valid data.";
+    Messages["CREDENTIAL_SUBJECT_KEY_ERROR"] = "Credential credentialSubject key is not present or having invalid data in the credential.";
+    Messages["PROOF_KEY_VALIDATE"] = "Checking credential proof...";
+    Messages["PROOF_KEY_SUCCESS"] = "Credential proof key is present in the credential with valid data.";
+    Messages["PROOF_KEY_ERROR"] = "Credential proof key is not present or having invalid data in the credential.";
+    Messages["ISSUANCE_DATE_KEY_VALIDATE"] = "Checking issuance date...";
+    Messages["ISSUANCE_DATE_KEY_SUCCESS"] = "Credential issuance date key is present in the credential with valid data.";
+    Messages["ISSUANCE_DATE_KEY_ERROR"] = "Credential issuance date key is not present or having invalid data in the credential.";
+    Messages["ISSUER_VALIDATION_STARTED"] = "Credential Issuer validation started";
+})(Messages = exports.Messages || (exports.Messages = {}));
