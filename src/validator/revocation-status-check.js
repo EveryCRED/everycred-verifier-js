@@ -21,6 +21,12 @@ export class RevocationStatusCheck {
             return yield this.statusRevocationCheck();
         });
     }
+    /**
+     * The function checks various conditions related to revocation and returns true if all conditions are
+     * met, otherwise it returns false.
+     * @returns The method is returning a boolean value. If all the conditions in the if statement are
+     * true, then it returns true. Otherwise, it returns false.
+     */
     statusRevocationCheck() {
         if (this.checkRevocationContext() &&
             this.checkRevocationType() &&
@@ -30,7 +36,7 @@ export class RevocationStatusCheck {
             this.checkValidUntilDate()) {
             return true;
         }
-        return false; // Stop program execution if any check fails
+        return false;
     }
     /**
      * This function checks if a specific key is present in a data object and if its value matches certain
@@ -103,28 +109,14 @@ export class RevocationStatusCheck {
      */
     checkRevocationRevokedAssertions() {
         logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE);
-        // this.revocationListData.revokedAssertions = [
-        //   {
-        //     "id": "urn:uuid:8b6d0d98-3843-4b92-9809-18b3ca21a4f1",
-        //     "revocationReason": "Credential is issued with invalid information"
-        //   },
-        //   {
-        //     "id": "urn:uuid:5955c7e0-aa6b-40bb-9853-9e16b4c969be",
-        //     "revocationReason": "Certificate is Expired"
-        //   },
-        //   {
-        //     "id": "urn:uuid:e1401810-3b13-4cf4-9d2c-c3354acc991c",
-        //     "revocationReason": "Issued with wrong information"
-        //   }
-        // ];
         if (isKeyPresent(this.revocationListData, REVOCATION_STATUS_CHECK_KEYS.revokedAssertions)) {
             let revokedAssertionsData = getDataFromKey(this.revocationListData, REVOCATION_STATUS_CHECK_KEYS.revokedAssertions);
             if (revokedAssertionsData && revokedAssertionsData.length) {
                 logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_SUCCESS);
-                let data = revokedAssertionsData.filter((data) => data.id === "urn:uuid:8b6d0d98-3843-4b92-9809-18b3ca21a4f1");
+                let data = revokedAssertionsData.filter((data) => data.id === this.credential.id);
                 if (data.length) {
                     logger(getDataFromKey(data, ['0', 'revocationReason']));
-                    return false; // terminate with reason from array
+                    return false; // terminate and display reason from the array
                 }
             }
             else {
@@ -135,8 +127,12 @@ export class RevocationStatusCheck {
         logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, "error");
         return false;
     }
+    /**
+     * The function `checkValidUntilDate` checks if a validUntilDate key is present in the credential
+     * object, and if so, validates if the date is not expired.
+     * @returns a boolean value.
+     */
     checkValidUntilDate() {
-        // this.credential.validUntil = '2023-06-09T12:20:45Z';
         if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.validUntilDate)) {
             logger(Messages.VALID_UNTIL_DATE_KEY_VALIDATE);
             let validUntilDate = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.validUntilDate);

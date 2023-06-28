@@ -8,7 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { get } from "lodash";
-// import { MerkleProofValidator2019 } from './checksum/merkle-proof-2019-validation';
 import { deepCloneData } from "./utils/credential-util";
 import { logger } from "./utils/logger";
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
@@ -18,7 +17,6 @@ export class EveryCredVerifier {
     constructor() {
         this.credentialValidation = false;
         this.credentialIssuerValidation = false;
-        this.proofValue = "z7veGu1qoKR3AS5AJiC3Kx6RxqS2rXV3g5fx6UrKcqU3nYCYaaccg5fN5dRUUG3STft5gbCHda3AHwFjBbVvZ5S9hjNo324XeqyUUXYG71RJV37Uyzf7ifaoW6SoUoqFtSaC3tagu7BMP2NSGpK3WbqRU6nsm1n6TctiukMKDB95tvx4KFxF3YEy4mpL4LhzRR9YnnCuB3rGQeDXhnGL8cvsesGnUb8ruxYRmSesP1aUTcbQH4uhugwEwAt2nk9zE3dxCGqhYtxD5VGScYojsNV2p3boFYiB2FTaPp1EjpDV7aFrBCzADZ";
         /**
          * This function is main entry point of the credential verifier.
          */
@@ -36,8 +34,6 @@ export class EveryCredVerifier {
             logger(this.revocationListData);
             logger("------------------ CREDENTIAL VALIDATION SUCCESSFUL ------------------ " +
                 this.credentialIssuerValidation);
-            // const mkTest = new MerkleProofValidator2019().decodeProofValue(this.proofValue);
-            // logger(`MK Test: ${mkTest}`);
             logger('---------------// E //----------------');
         });
     }
