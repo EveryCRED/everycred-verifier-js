@@ -5,9 +5,9 @@ import {
 import { Messages } from "../constants/messages";
 import {
   deepCloneData,
-  isKeyPresent,
-  getDataFromKey,
   getDataFromAPI,
+  getDataFromKey,
+  isKeyPresent,
 } from "../utils/credential-util";
 import { logger } from "../utils/logger";
 
@@ -16,7 +16,7 @@ export class CredentialIssuerValidator {
   private issuerProfileData: any;
   private revocationListData: any;
 
-  constructor() {}
+  constructor() { }
 
   /**
    * This is an asynchronous function that validates credential data and returns the validation status
@@ -30,8 +30,8 @@ export class CredentialIssuerValidator {
    */
   async validate(credentialData: any): Promise<any> {
     this.credential = deepCloneData(credentialData);
-    logger(this.credential);
     let status = await this.validateCredentialIssuer();
+
     if (status) {
       return {
         issuerProfileValidationStatus: status,
@@ -59,15 +59,16 @@ export class CredentialIssuerValidator {
         this.credential,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
       );
-      logger(issuerData);
       if (issuerData && new URL(issuerData)) {
         logger(Messages.ISSUER_KEY_SUCCESS);
         logger(Messages.FETCHING_ISSUER_PROFILE);
         this.issuerProfileData = await getDataFromAPI(issuerData);
 
-        this.issuerProfileData
-          ? logger(Messages.FETCHING_ISSUER_PROFILE_SUCCESS)
-          : logger(Messages.FETCHING_ISSUER_PROFILE_ERROR);
+        if (this.issuerProfileData) {
+          logger(Messages.FETCHING_ISSUER_PROFILE_SUCCESS);
+        } else {
+          logger(Messages.FETCHING_ISSUER_PROFILE_ERROR);
+        }
 
         if (
           this.issuerProfileData &&
@@ -123,7 +124,7 @@ export class CredentialIssuerValidator {
   private validateCredentialType(): boolean {
     logger(Messages.TYPE_ISSUER_PROFILE_KEY_VALIDATE);
     if (
-      isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type)
+      isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type)
     ) {
       let typeData: string = getDataFromKey(
         this.issuerProfileData,
@@ -145,7 +146,9 @@ export class CredentialIssuerValidator {
    */
   private validateIssuerProfileID(): boolean {
     logger(Messages.ID_ISSUER_PROFILE_KEY_VALIDATE);
-    if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id)) {
+    if (
+      isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id)
+    ) {
       let idData = getDataFromKey(
         this.issuerProfileData,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.id
@@ -153,10 +156,10 @@ export class CredentialIssuerValidator {
       if (
         idData &&
         idData ===
-          getDataFromKey(
-            this.credential,
-            CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
-          )
+        getDataFromKey(
+          this.credential,
+          CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
+        )
       ) {
         logger(Messages.ID_ISSUER_PROFILE_KEY_SUCCESS);
         return true;
@@ -174,7 +177,7 @@ export class CredentialIssuerValidator {
   private validateIssuerProfileName(): boolean {
     logger(Messages.NAME_ISSUER_PROFILE_KEY_VALIDATE);
     if (
-      isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name)
+      isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name)
     ) {
       let nameData = getDataFromKey(
         this.issuerProfileData,
@@ -197,7 +200,7 @@ export class CredentialIssuerValidator {
   private validateIssuerProfileEmail(): boolean {
     logger(Messages.EMAIL_ISSUER_PROFILE_KEY_VALIDATE);
     if (
-      isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email)
+      isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email)
     ) {
       let emailData = getDataFromKey(
         this.issuerProfileData,

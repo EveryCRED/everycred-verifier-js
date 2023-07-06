@@ -72,3 +72,33 @@ export enum REVOCATION_STATUS_CHECK_KEYS {
   issuer = "issuer",
   revokedAssertions = "revokedAssertions",
 }
+
+export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
+  decoded_proof_value = "decoded_proof_value",
+  get_byte_array_to_issue = "get_byte_array_to_issue",
+  anchors = "anchors",
+  path = "path",
+  merkleRoot = "merkleRoot",
+  targetHash = "targetHash",
+}
+
+export const BLOCKCHAIN_API_LIST = [
+  { id: "ethereumMainnet", url: "https://api.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+  { id: "ethereumSepolia", url: "https://api-sepolia.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+];
+
+export enum BASE_API {
+  eth = "ethereum",
+}
+
+export enum BASE_NETWORK {
+  sepolia = "Sepolia",
+  mainnet = "Mainnet"
+}
+
+export enum GENERAL_KEYWORDS {
+  url = "url",
+  apiKey = "apiKey"
+}
+
+export const MERKLE_TREE_VALIDATION_API = 'http://192.168.1.23:8888/user/credential/MarkelTreeVerification?markel_tree_data=normalize_data';

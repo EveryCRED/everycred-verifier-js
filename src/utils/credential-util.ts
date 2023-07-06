@@ -1,4 +1,4 @@
-import { cloneDeep, get, has } from "lodash";
+import { cloneDeep, get, has, isEmpty } from "lodash";
 import { logger } from "./logger";
 
 /**
@@ -8,7 +8,7 @@ import { logger } from "./logger";
  * @returns The function `deepCloneData` returns the result of calling the `cloneDeep` function on the
  * `data` parameter, if `data` is truthy. If `data` is falsy, the function does not return anything.
  */
-export function deepCloneData(data: any) {
+export function deepCloneData(data: any): any {
   if (data) return cloneDeep(data);
 }
 
@@ -23,7 +23,7 @@ export function deepCloneData(data: any) {
  * The `has` function is not shown in the code snippet, but it is likely a custom function that checks
  * if the `key` is present
  */
-export function isKeyPresent(data: any, key: string) {
+export function isKeyPresent(data: any, key: string): boolean {
   return data && key ? has(data, key) : false;
 }
 
@@ -57,9 +57,10 @@ export function getDataFromKey(
  * from the specified URL. If there is an error during the fetch or parsing of the JSON data, the
  * function logs the error using a `logger` function and re-throws the error.
  */
-export async function getDataFromAPI(url: string) {
+export async function getDataFromAPI(url: string, options?: any): Promise<any> {
   try {
-    return await (await fetch(url)).json();
+    const response = isEmpty(options) ? await fetch(url) : await fetch(url, options);
+    return await response.json();
   } catch (err) {
     logger(err, "error");
     throw err;
