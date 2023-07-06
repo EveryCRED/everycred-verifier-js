@@ -60,7 +60,6 @@ The verifier performs detailed verification steps on the package:
    - Decode "proofValue" and extract signature details.
    - Validate the existence of the "anchors" keyword
 
-.
    - Check the existence of "path", "merkleRoot", "TargetHash", and "anchors".
    - Ensure that "anchors" has a value in the form of an array.
    - Separate the transaction ID and blink value.
