@@ -1,13 +1,4 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { cloneDeep, get, has } from "lodash";
+import { cloneDeep, get, has, isEmpty } from "lodash";
 import { logger } from "./logger";
 /**
  * This function deep clones the input data using the cloneDeep method.
@@ -59,16 +50,15 @@ export function getDataFromKey(data, key, defaultValue = null) {
  * from the specified URL. If there is an error during the fetch or parsing of the JSON data, the
  * function logs the error using a `logger` function and re-throws the error.
  */
-export function getDataFromAPI(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            return yield (yield fetch(url)).json();
-        }
-        catch (err) {
-            logger(err, "error");
-            throw err;
-        }
-    });
+export async function getDataFromAPI(url, options) {
+    try {
+        const response = isEmpty(options) ? await fetch(url) : await fetch(url, options);
+        return await response.json();
+    }
+    catch (err) {
+        logger(err, "error");
+        throw err;
+    }
 }
 /**
  * This TypeScript function checks if a given date string has already passed.

@@ -1,6 +1,7 @@
 import { get } from "lodash";
+import { MerkleProofValidator2019 } from './checksum/merkle-proof-2019-validation';
 import { deepCloneData } from "./utils/credential-util";
-import { logger } from "./utils/logger";
+import { logger } from './utils/logger';
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
 import { CredentialValidator } from "./validator/credential-validator";
 import { RevocationStatusCheck } from './validator/revocation-status-check';
@@ -11,6 +12,7 @@ export class EveryCredVerifier {
   private revocationListData: any;
   private credentialValidation: boolean = false;
   private credentialIssuerValidation: boolean = false;
+  private checksumValidation: boolean = false;
 
   constructor() { }
 
@@ -18,27 +20,21 @@ export class EveryCredVerifier {
    * This function is main entry point of the credential verifier.
    */
   verify = async (certificate: any) => {
-    logger('---------------// S //----------------');
     this.certificate = deepCloneData(certificate);
 
     if (!(await this.validateCredentials()) || !(await this.revocationStatusCheck())) {
-      logger(
-        "------------------ CREDENTIAL VALIDATION FAILED ------------------ " +
-        this.credentialIssuerValidation
-      );
-      logger('---------------// E //----------------');
-      return; // Stop program execution if any check fails
+      logger('CREDENTIAL VALIDATION FAILED');
+      return false; // Stop program execution if any check fails
     }
 
-    logger(this.certificate);
-    logger(this.issuerProfileData);
-    logger(this.revocationListData);
-    logger(
-      "------------------ CREDENTIAL VALIDATION SUCCESSFUL ------------------ " +
-      this.credentialIssuerValidation
-    );
+    if (!(await this.validateChecksum())) {
+      logger('CHECKSUM VALIDATION FAILED');
+      return false; // Stop program execution if any check fails
+    }
+    logger('CHECKSUM VALIDATION SUCCESSFUL');
+    logger('CREDENTIAL VALIDATION SUCCESSFUL');
 
-    logger('---------------// E //----------------');
+    return true;
   };
 
   /**
@@ -46,7 +42,7 @@ export class EveryCredVerifier {
    * retrieves issuer profile and revocation list data if validation is successful.
    */
   private async validateCredentials(): Promise<boolean> {
-    this.credentialValidation = await new CredentialValidator().validate(
+    this.credentialValidation = new CredentialValidator().validate(
       this.certificate
     );
     if (this.credentialValidation) {
@@ -79,6 +75,20 @@ export class EveryCredVerifier {
     );
 
     return this.credentialIssuerValidation;
+  }
+
+  /**
+   * The function `validateChecksum` is a private asynchronous method that uses the
+   * `MerkleProofValidator2019` class to validate a certificate's checksum and returns the result.
+   * @returns the result of the checksum validation, which is stored in the variable
+   * `this.checksumValidation`.
+   */
+  private async validateChecksum() {
+    this.checksumValidation = await new MerkleProofValidator2019().validate(
+      this.certificate
+    );
+
+    return this.checksumValidation;
   }
 
 }

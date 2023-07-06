@@ -3,6 +3,7 @@ import { CREDENTIALS_CONSTANTS, CREDENTIALS_VALIDATORS_KEYS, } from "../constant
 import { Messages } from "../constants/messages";
 import { logger } from "../utils/logger";
 export class CredentialValidator {
+    credential;
     constructor() { }
     /**
      * The function validates a credential's data and returns a boolean value indicating whether the

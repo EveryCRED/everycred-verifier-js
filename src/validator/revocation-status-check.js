@@ -1,25 +1,17 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CREDENTIALS_CONSTANTS, CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, REVOCATION_STATUS_CHECK_KEYS, } from "../constants/common";
 import { Messages } from "../constants/messages";
 import { deepCloneData, getDataFromKey, isDateExpired, isKeyPresent } from "../utils/credential-util";
 import { logger } from "../utils/logger";
 export class RevocationStatusCheck {
+    credential;
+    issuerProfileData;
+    revocationListData;
     constructor() { }
-    validate(revocationListData, credentialData, issuerProfileData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.credential = deepCloneData(credentialData);
-            this.issuerProfileData = deepCloneData(issuerProfileData);
-            this.revocationListData = deepCloneData(revocationListData);
-            return yield this.statusRevocationCheck();
-        });
+    async validate(revocationListData, credentialData, issuerProfileData) {
+        this.credential = deepCloneData(credentialData);
+        this.issuerProfileData = deepCloneData(issuerProfileData);
+        this.revocationListData = deepCloneData(revocationListData);
+        return await this.statusRevocationCheck();
     }
     /**
      * The function checks various conditions related to revocation and returns true if all conditions are

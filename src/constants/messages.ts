@@ -88,4 +88,43 @@ export enum Messages {
   VALID_UNTIL_DATE_KEY_ERROR = "credential is expired.",
 
   CERTIFICATE_REVOCATION_LIST_STATUS = "Credential is valid and not revoked.",
+
+  FETCHING_NORMALIZED_DECODED_DATA = "Fetching normalized and decoded data started...",
+  FETCHING_NORMALIZED_DECODED_DATA_SUCCESS = "Fetched normalized and decoded data successfully.",
+  FETCHING_NORMALIZED_DECODED_DATA_ERROR = "Error while fetching normalized and decoded data",
+
+  ANCHOR_DECODED_DATA_KEY_VALIDATE = "Checking decoded data anchors...",
+  ANCHOR_DECODED_DATA_KEY_SUCCESS = "anchors key is present with valid data.",
+  ANCHOR_DECODED_DATA_KEY_ERROR = "Invalid credential.",
+
+  PATH_DECODED_DATA_KEY_VALIDATE = "Checking decoded data path...",
+  PATH_DECODED_DATA_KEY_SUCCESS = "path key is present with valid data.",
+  PATH_DECODED_DATA_KEY_ERROR = "path key is not present or having invalid data list.",
+
+  MERKLEROOT_DECODED_DATA_KEY_VALIDATE = "Checking decoded data merkleRoot...",
+  MERKLEROOT_DECODED_DATA_KEY_SUCCESS = "merkleRoot key is present with valid data.",
+  MERKLEROOT_DECODED_DATA_KEY_ERROR = "merkleRoot key is not present or having invalid data list.",
+
+  TARGETHASH_DECODED_DATA_KEY_VALIDATE = "Checking decoded data targetHash...",
+  TARGETHASH_DECODED_DATA_KEY_SUCCESS = "targetHash key is present with valid data.",
+  TARGETHASH_DECODED_DATA_KEY_ERROR = "targetHash key is not present or having invalid data list.",
+
+  SELECTED_ANCHOR_RETRIEVAL_ERROR = 'Failed to retrieve selected anchor.',
+  REQUIRED_VALUES_RETRIEVAL_ERROR = 'Failed to retrieve required values from the selected anchor.',
+  BASE_API_OR_NETWORK_RETRIEVAL_ERROR = 'Failed to retrieve base API or base network value.',
+  NO_MATCHING_API_FOUND_ERROR = 'No matching API found.',
+  URL_OR_APIKEY_RETRIEVAL_ERROR = 'Failed to retrieve URL or API key from the matched API.',
+  TRANSACTION_NOT_FOUND_ERROR = 'Transaction not found.',
+  DATA_FETCHED_ERROR = 'Failed to fetch data from the blockchain API.',
+  DATA_FETCHED_SUCCESS = 'Data successfully fetched from the blockchain API.',
+
+  CALCULATED_HASH_DIFFER_FROM_MERKLEROOT = 'The calculated hash does not match the provided merkleRoot.',
+  CALCULATED_HASH_MATCHES_WITH_MERKLEROOT = 'The calculated hash matches the provided merkleRoot.',
+
+  CALCULATED_HASH_DIFFER_FROM_TARGETHASH = 'The calculated hash does not match the provided targetHash.',
+  CALCULATED_HASH_MATCHES_WITH_TARGETHASH = 'The calculated hash matches the provided targetHash.',
+
+  MERKLE_PROOF_2019_VALIDATION_STARTED = 'MerkleProof2019 validation started....',
+  MERKLE_PROOF_2019_VALIDATION_SUCCESS = 'MerkleProof2019 validation successful.',
+  MERKLE_PROOF_2019_VALIDATION_FAILED = 'MerkleProof2019 validation failed.',
 }

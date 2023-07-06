@@ -1,3 +1,7 @@
+import { StoreLogsService } from './store-logs';
+
+const storeLogs = new StoreLogsService();
+
 /**
  * The function "logger" logs data to the console with an optional type parameter.
  * @param {any} data - The data that needs to be logged. It can be of any data type.
@@ -8,4 +12,5 @@
  */
 export function logger(data: any, type: "log" | "error" | "warn" = "log") {
   console[type](data);
+  storeLogs.storeLogs(data, type);
 }

@@ -72,3 +72,31 @@ export var REVOCATION_STATUS_CHECK_KEYS;
     REVOCATION_STATUS_CHECK_KEYS["issuer"] = "issuer";
     REVOCATION_STATUS_CHECK_KEYS["revokedAssertions"] = "revokedAssertions";
 })(REVOCATION_STATUS_CHECK_KEYS || (REVOCATION_STATUS_CHECK_KEYS = {}));
+export var CHECKSUM_MERKLEPROOF_CHECK_KEYS;
+(function (CHECKSUM_MERKLEPROOF_CHECK_KEYS) {
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["decoded_proof_value"] = "decoded_proof_value";
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["get_byte_array_to_issue"] = "get_byte_array_to_issue";
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["anchors"] = "anchors";
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["path"] = "path";
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["merkleRoot"] = "merkleRoot";
+    CHECKSUM_MERKLEPROOF_CHECK_KEYS["targetHash"] = "targetHash";
+})(CHECKSUM_MERKLEPROOF_CHECK_KEYS || (CHECKSUM_MERKLEPROOF_CHECK_KEYS = {}));
+export const BLOCKCHAIN_API_LIST = [
+    { id: "ethereumMainnet", url: "https://api.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+    { id: "ethereumSepolia", url: "https://api-sepolia.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+];
+export var BASE_API;
+(function (BASE_API) {
+    BASE_API["eth"] = "ethereum";
+})(BASE_API || (BASE_API = {}));
+export var BASE_NETWORK;
+(function (BASE_NETWORK) {
+    BASE_NETWORK["sepolia"] = "Sepolia";
+    BASE_NETWORK["mainnet"] = "Mainnet";
+})(BASE_NETWORK || (BASE_NETWORK = {}));
+export var GENERAL_KEYWORDS;
+(function (GENERAL_KEYWORDS) {
+    GENERAL_KEYWORDS["url"] = "url";
+    GENERAL_KEYWORDS["apiKey"] = "apiKey";
+})(GENERAL_KEYWORDS || (GENERAL_KEYWORDS = {}));
+export const MERKLE_TREE_VALIDATION_API = 'http://192.168.1.23:8888/user/credential/MarkelTreeVerification?markel_tree_data=normalize_data';

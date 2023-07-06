@@ -1,17 +1,11 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CREDENTIALS_CONSTANTS, CREDENTIALS_ISSUER_VALIDATORS_KEYS, } from "../constants/common";
 import { Messages } from "../constants/messages";
-import { deepCloneData, isKeyPresent, getDataFromKey, getDataFromAPI, } from "../utils/credential-util";
+import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent, } from "../utils/credential-util";
 import { logger } from "../utils/logger";
 export class CredentialIssuerValidator {
+    credential;
+    issuerProfileData;
+    revocationListData;
     constructor() { }
     /**
      * This is an asynchronous function that validates credential data and returns the validation status
@@ -23,61 +17,58 @@ export class CredentialIssuerValidator {
      * `validateCredentialIssuer` returns a truthy value, then `issuerProfileValidationStatus` will be
      * set to that value, and `issuerProfileData`
      */
-    validate(credentialData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.credential = deepCloneData(credentialData);
-            logger(this.credential);
-            let status = yield this.validateCredentialIssuer();
-            if (status) {
-                return {
-                    issuerProfileValidationStatus: status,
-                    issuerProfileData: this.issuerProfileData,
-                    revocationListData: this.revocationListData,
-                };
-            }
+    async validate(credentialData) {
+        this.credential = deepCloneData(credentialData);
+        let status = await this.validateCredentialIssuer();
+        if (status) {
             return {
                 issuerProfileValidationStatus: status,
-                issuerProfileData: null,
-                revocationListData: null,
+                issuerProfileData: this.issuerProfileData,
+                revocationListData: this.revocationListData,
             };
-        });
+        }
+        return {
+            issuerProfileValidationStatus: status,
+            issuerProfileData: null,
+            revocationListData: null,
+        };
     }
     /**
      * This is a private async function that validates the credential issuer's profile data.
      * @returns a Promise that resolves to a boolean value.
      */
-    validateCredentialIssuer() {
-        return __awaiter(this, void 0, void 0, function* () {
-            logger(Messages.ISSUER_VALIDATION_STARTED);
-            if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer)) {
-                let issuerData = getDataFromKey(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer);
-                logger(issuerData);
-                if (issuerData && new URL(issuerData)) {
+    async validateCredentialIssuer() {
+        logger(Messages.ISSUER_VALIDATION_STARTED);
+        if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer)) {
+            let issuerData = getDataFromKey(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer);
+            if (issuerData && new URL(issuerData)) {
+                logger(Messages.ISSUER_KEY_SUCCESS);
+                logger(Messages.FETCHING_ISSUER_PROFILE);
+                this.issuerProfileData = await getDataFromAPI(issuerData);
+                if (this.issuerProfileData) {
+                    logger(Messages.FETCHING_ISSUER_PROFILE_SUCCESS);
+                }
+                else {
+                    logger(Messages.FETCHING_ISSUER_PROFILE_ERROR);
+                }
+                if (this.issuerProfileData &&
+                    this.validateIssuerProfileContext() &&
+                    this.validateCredentialType() &&
+                    this.validateIssuerProfileID() &&
+                    this.validateIssuerProfileName() &&
+                    this.validateIssuerProfileEmail() &&
+                    this.validateIssuerProfileRevocationList() &&
+                    this.validateIssuerProfilePublicKey() &&
+                    (await this.validateRevocationListFromIssuerProfile())) {
                     logger(Messages.ISSUER_KEY_SUCCESS);
-                    logger(Messages.FETCHING_ISSUER_PROFILE);
-                    this.issuerProfileData = yield getDataFromAPI(issuerData);
-                    this.issuerProfileData
-                        ? logger(Messages.FETCHING_ISSUER_PROFILE_SUCCESS)
-                        : logger(Messages.FETCHING_ISSUER_PROFILE_ERROR);
-                    if (this.issuerProfileData &&
-                        this.validateIssuerProfileContext() &&
-                        this.validateCredentialType() &&
-                        this.validateIssuerProfileID() &&
-                        this.validateIssuerProfileName() &&
-                        this.validateIssuerProfileEmail() &&
-                        this.validateIssuerProfileRevocationList() &&
-                        this.validateIssuerProfilePublicKey() &&
-                        (yield this.validateRevocationListFromIssuerProfile())) {
-                        logger(Messages.ISSUER_KEY_SUCCESS);
-                        return true;
-                    }
+                    return true;
                 }
             }
-            else {
-                logger(Messages.ISSUER_KEY_ERROR);
-            }
-            return false;
-        });
+        }
+        else {
+            logger(Messages.ISSUER_KEY_ERROR);
+        }
+        return false;
     }
     /**
      * This function validates the issuer profile context and returns a boolean value indicating whether
@@ -101,7 +92,7 @@ export class CredentialIssuerValidator {
      */
     validateCredentialType() {
         logger(Messages.TYPE_ISSUER_PROFILE_KEY_VALIDATE);
-        if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type)) {
+        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type)) {
             let typeData = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type);
             if (CREDENTIALS_CONSTANTS.issuerProfileTypeSupported.includes(typeData)) {
                 logger(Messages.TYPE_ISSUER_PROFILE_KEY_SUCCESS);
@@ -118,7 +109,7 @@ export class CredentialIssuerValidator {
      */
     validateIssuerProfileID() {
         logger(Messages.ID_ISSUER_PROFILE_KEY_VALIDATE);
-        if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id)) {
+        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id)) {
             let idData = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id);
             if (idData &&
                 idData ===
@@ -137,7 +128,7 @@ export class CredentialIssuerValidator {
      */
     validateIssuerProfileName() {
         logger(Messages.NAME_ISSUER_PROFILE_KEY_VALIDATE);
-        if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name)) {
+        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name)) {
             let nameData = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name);
             if (nameData) {
                 logger(Messages.NAME_ISSUER_PROFILE_KEY_SUCCESS);
@@ -154,7 +145,7 @@ export class CredentialIssuerValidator {
      */
     validateIssuerProfileEmail() {
         logger(Messages.EMAIL_ISSUER_PROFILE_KEY_VALIDATE);
-        if (isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email)) {
+        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email)) {
             let emailData = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email);
             if (emailData) {
                 logger(Messages.EMAIL_ISSUER_PROFILE_KEY_SUCCESS);
@@ -210,18 +201,16 @@ export class CredentialIssuerValidator {
      * success or failure.
      * @returns A Promise that resolves to a boolean value.
      */
-    validateRevocationListFromIssuerProfile() {
-        return __awaiter(this, void 0, void 0, function* () {
-            logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE);
-            if (this.issuerProfileData) {
-                this.revocationListData = yield getDataFromAPI(getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList));
-                if (this.revocationListData) {
-                    logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS);
-                    return true;
-                }
+    async validateRevocationListFromIssuerProfile() {
+        logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE);
+        if (this.issuerProfileData) {
+            this.revocationListData = await getDataFromAPI(getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList));
+            if (this.revocationListData) {
+                logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS);
+                return true;
             }
-            logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR, "error");
-            return false;
-        });
+        }
+        logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR, "error");
+        return false;
     }
 }
