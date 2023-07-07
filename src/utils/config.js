@@ -1,1 +1,0 @@
-export const MERKLE_TREE_VALIDATION_API_URL = 'http://192.168.1.23:8888';
