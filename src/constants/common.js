@@ -103,3 +103,11 @@ export const MERKLE_TREE = {
     validation_api: "/user/credential/MarkelTreeVerification?markel_tree_data=",
     data_type: "normalize_data"
 };
+export var HTTP_METHODS;
+(function (HTTP_METHODS) {
+    HTTP_METHODS["GET"] = "GET";
+    HTTP_METHODS["POST"] = "POST";
+    HTTP_METHODS["PUT"] = "PUT";
+    HTTP_METHODS["PATCH"] = "PATCH";
+    HTTP_METHODS["DELETE"] = "DELETE";
+})(HTTP_METHODS || (HTTP_METHODS = {}));

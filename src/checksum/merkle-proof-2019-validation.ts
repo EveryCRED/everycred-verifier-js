@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import { BASE_API, BASE_NETWORK, BLOCKCHAIN_API_LIST, CHECKSUM_MERKLEPROOF_CHECK_KEYS, GENERAL_KEYWORDS, MERKLE_TREE } from '../constants/common';
+import { BASE_API, BASE_NETWORK, BLOCKCHAIN_API_LIST, CHECKSUM_MERKLEPROOF_CHECK_KEYS, GENERAL_KEYWORDS, HTTP_METHODS, MERKLE_TREE } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from '../utils/credential-util';
@@ -100,7 +100,7 @@ export class MerkleProofValidator2019 {
     formData.append('body', blob);
 
     const options = {
-      method: 'POST',
+      method: HTTP_METHODS.POST,
       headers: {
         Accept: 'application/json',
       },
@@ -147,11 +147,13 @@ export class MerkleProofValidator2019 {
     }
 
     this.isMerkleProofVerified = currentHash === merkleRoot;
-    if (this.isMerkleProofVerified) {
-      logger(Messages.CALCULATED_HASH_MATCHES_WITH_MERKLEROOT);
-    } else {
-      logger(Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT, "error");
-    }
+    logger(
+      this.isMerkleProofVerified
+        ? Messages.CALCULATED_HASH_MATCHES_WITH_MERKLEROOT
+        : Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT,
+      this.isMerkleProofVerified ? "log" : "error"
+    );
+
     return this.isMerkleProofVerified;
   }
 
@@ -264,12 +266,15 @@ export class MerkleProofValidator2019 {
    * @returns a boolean value.
    */
   private async fetchDataFromBlockchainAPI(): Promise<boolean> {
+    // Fetching the selected anchor from decodedData
     const selectedAnchor = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':');
     if (!selectedAnchor) {
+      // Logging an error when selectedAnchor retrieval fails
       logger(Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR, "error");
       return false;
     }
 
+    // Extracting blinkValue, networkType, and transactionID from selectedAnchor
     const [blinkValue, networkType, transactionID] = [
       getDataFromKey(selectedAnchor, ['1']),
       getDataFromKey(selectedAnchor, ['2']),
@@ -277,49 +282,80 @@ export class MerkleProofValidator2019 {
     ];
 
     if (!blinkValue || !networkType || !transactionID) {
+      // Logging an error when required values retrieval fails
       logger(Messages.REQUIRED_VALUES_RETRIEVAL_ERROR, "error");
       return false;
     }
 
+    // Retrieving baseAPIValue and baseNetworkValue using blinkValue and networkType
     const baseAPIValue = getDataFromKey(BASE_API, blinkValue);
     const baseNetworkValue = getDataFromKey(BASE_NETWORK, networkType);
 
     if (!baseAPIValue || !baseNetworkValue) {
+      // Logging an error when baseAPIValue or baseNetworkValue retrieval fails
       logger(Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR, "error");
       return false;
     }
 
+    // Finding the matchedAPI based on baseAPIValue and baseNetworkValue
     const matchedAPI = BLOCKCHAIN_API_LIST.find(api => api.id === `${baseAPIValue}${baseNetworkValue}`);
 
     if (!matchedAPI) {
+      // Logging an error when no matching API is found
       logger(Messages.NO_MATCHING_API_FOUND_ERROR, "error");
       return false;
     }
 
+    // Retrieving the URL and apiKey from matchedAPI
     const url = getDataFromKey(matchedAPI, GENERAL_KEYWORDS.url);
     const apiKey = getDataFromKey(matchedAPI, GENERAL_KEYWORDS.apiKey);
 
     if (!url || !apiKey) {
+      // Logging an error when URL or apiKey retrieval fails
       logger(Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, "error");
       return false;
     }
 
-    const finalUrl = `${url}api?module=proxy&action=eth_getTransactionByHash&apikey=${apiKey}&txhash=${transactionID}`;
+    // Building the final URL using buildTransactionUrl method
+    const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID);
 
     try {
+      // Fetching data from the API using finalUrl
       this.blockchainApiResponse = await getDataFromAPI(finalUrl);
     } catch (error) {
+      // Logging an error when the transaction is not found
       logger(Messages.TRANSACTION_NOT_FOUND_ERROR, "error");
       return false;
     }
 
     if (!isEmpty(this.blockchainApiResponse)) {
+      // Logging success message when data is fetched successfully
       logger(Messages.DATA_FETCHED_SUCCESS);
       return true;
     }
 
+    // Logging an error when data fetch fails
     logger(Messages.DATA_FETCHED_ERROR, "error");
     return false;
+  }
+
+  /**
+   * The function builds a transaction URL by concatenating the base URL, endpoint, and query parameters.
+   * @param {string} url - The `url` parameter is a string representing the base URL of the API endpoint
+   * you want to call. It should include the protocol (e.g., "https://") and the domain name (e.g.,
+   * "api.example.com").
+   * @param {string} apiKey - The `apiKey` parameter is a string that represents the API key required to
+   * access the API endpoint. It is used to authenticate the user and ensure that only authorized users
+   * can access the endpoint.
+   * @param {string} transactionID - The `transactionID` parameter is a string that represents the hash
+   * of a transaction in the Ethereum blockchain.
+   * @returns a string that represents a transaction URL.
+   */
+  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string): Promise<string> {
+    const endpoint = "api?module=proxy&action=eth_getTransactionByHash";
+    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}`;
+
+    return `${url}${endpoint}${queryParams}`;
   }
 
   /**

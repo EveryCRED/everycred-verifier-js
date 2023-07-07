@@ -105,3 +105,11 @@ export const MERKLE_TREE = {
   validation_api: "/user/credential/MarkelTreeVerification?markel_tree_data=",
   data_type: "normalize_data"
 };
+
+export enum HTTP_METHODS {
+  GET = 'GET',
+  POST = 'POST',
+  PUT = 'PUT',
+  PATCH = 'PATCH',
+  DELETE = 'DELETE',
+}
