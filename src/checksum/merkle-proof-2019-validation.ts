@@ -1,8 +1,9 @@
 import { Buffer } from 'buffer';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import { BASE_API, BASE_NETWORK, BLOCKCHAIN_API_LIST, CHECKSUM_MERKLEPROOF_CHECK_KEYS, GENERAL_KEYWORDS, MERKLE_TREE_VALIDATION_API } from '../constants/common';
+import { BASE_API, BASE_NETWORK, BLOCKCHAIN_API_LIST, CHECKSUM_MERKLEPROOF_CHECK_KEYS, GENERAL_KEYWORDS, MERKLE_TREE } from '../constants/common';
 import { Messages } from '../constants/messages';
+import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from '../utils/credential-util';
 import { logger } from '../utils/logger';
 
@@ -93,6 +94,7 @@ export class MerkleProofValidator2019 {
    * @returns a Promise that resolves to an object of type `any`.
    */
   private async getNormalizedDecodedData(): Promise<any> {
+    const apiUrl = `${MERKLE_TREE_VALIDATION_API_URL}${MERKLE_TREE.validation_api}${MERKLE_TREE.data_type}`;
     const formData = new FormData();
     const blob = new Blob([JSON.stringify(this.credential)], { type: 'application/json' });
     formData.append('body', blob);
@@ -105,7 +107,7 @@ export class MerkleProofValidator2019 {
       body: formData,
     };
 
-    const response = await getDataFromAPI(MERKLE_TREE_VALIDATION_API, options);
+    const response = await getDataFromAPI(apiUrl, options);
     const isValidResponse = this.validateNormalizedDecodedData(response);
 
     if (isValidResponse) {

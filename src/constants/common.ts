@@ -101,4 +101,7 @@ export enum GENERAL_KEYWORDS {
   apiKey = "apiKey"
 }
 
-export const MERKLE_TREE_VALIDATION_API = 'http://192.168.1.23:8888/user/credential/MarkelTreeVerification?markel_tree_data=normalize_data';
+export const MERKLE_TREE = {
+  validation_api: "/user/credential/MarkelTreeVerification?markel_tree_data=",
+  data_type: "normalize_data"
+};
