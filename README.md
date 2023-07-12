@@ -11,7 +11,7 @@ EveryCRED Verifier is a custom verifier designed to verify EveryCRED credentials
 You can install the library using npm:
 
 ```shell
-npm install everycred-verifier-js
+npm install everycred-verifier
 ```
 
 ## Verifier Steps :clipboard:
