@@ -5,6 +5,8 @@
 /out-tsc
 /bazel-out
 .scannerwork
+*.js
+*.d.ts
 
 # Node
 *node_modules
@@ -35,7 +37,7 @@ yarn-error.log
 testem.log
 /typings
 *.husky
-*.vscode
+*.vscode/
 *package-lock.json
 *.editorconfig
 
@@ -45,3 +47,13 @@ Thumbs.db
 
 # Configuration files
 config.ts
+
+# Ignore the dist folder
+/dist
+
+# Ignore .d.ts files
+*.d.ts
+
+# Ignore .js files
+*.js
+!webpack.config.js
