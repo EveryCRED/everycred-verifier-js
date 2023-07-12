@@ -1,8 +1,15 @@
 {
   "name": "everycred-verifier",
   "version": "0.0.1",
-  "description": "EveryCRED custom verifier to verify EveryCRED credentials.",
-  "main": "index.js",
+  "description": "EveryCRED custom verifier to verify EveryCRED W3C verifiable credentials.",
+  "keywords": [
+    "credentials",
+    "verification",
+    "validation",
+    "W3C",
+    "verifiable credentials"
+  ],
+  "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc -p \".\"",

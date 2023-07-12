@@ -75,6 +75,7 @@ export class MerkleProofValidator2019 {
    * @returns a boolean value.
    */
   private validateNormalizedDecodedData(response: any): boolean {
+
     logger(Messages.FETCHING_NORMALIZED_DECODED_DATA);
     if (
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
@@ -108,10 +109,11 @@ export class MerkleProofValidator2019 {
     };
 
     const response = await getDataFromAPI(apiUrl, options);
-    const isValidResponse = this.validateNormalizedDecodedData(response);
+    const apiResponse = response?.data;
+    const isValidResponse = this.validateNormalizedDecodedData(apiResponse);
 
     if (isValidResponse) {
-      return response;
+      return apiResponse;
     }
   }
 
