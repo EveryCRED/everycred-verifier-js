@@ -1,10 +1,10 @@
 ![EveryCRED Logo](https://camo.githubusercontent.com/f87a93c5e07d87f9f28ab6bb05b03e3282818f74a6b8a846c9f81acaa7ce8591/68747470733a2f2f6576657279637265642d7075626c69632e73332e61702d736f7574682d312e616d617a6f6e6177732e636f6d2f6c6f676f732f626c6f636b6e65745f6c6f676f2e706e67)
 
-# EveryCRED Verifier :lock:
+# EveryCRED Verifier JS :lock:
 
-Version: 0.1 :bookmark_tabs:
+Version: 1.0.0 :bookmark_tabs:
 
-EveryCRED Verifier is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard. It is built using Angular and JavaScript technologies.
+EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard. It is built using Angular and JavaScript technologies.
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install everycred-verifier-js
 
 ## Verifier Steps :clipboard:
 
-The EveryCRED Verifier follows the following steps to validate credentials:
+The EveryCRED Verifier JS follows the following steps to validate credentials:
 
 1. **Validators** :white_check_mark:: Check the authenticity and integrity of the credential.
    - **Authenticity checks** :closed_lock_with_key:: Verify the authenticity of the credential.
@@ -87,4 +87,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 0.1 of the EveryCRED Verifier does not support the Open Badges Standards.
+Version 1.0.0 of the EveryCRED Verifier JS does not support the Open Badges Standards.

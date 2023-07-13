@@ -102,7 +102,7 @@ export enum GENERAL_KEYWORDS {
 }
 
 export const MERKLE_TREE = {
-  validation_api: "/user/credential/MarkelTreeVerification?markel_tree_data=",
+  validation_api: "/user/credential/markel_tree_verification?merkel_tree_data=",
   data_type: "normalize_data"
 };
 
