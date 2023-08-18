@@ -1,7 +1,11 @@
 # Files and directories to ignore when publishing to npm
+
 src/
 tsconfig.json
 *.config.js
 node_modules/
 .vscode
 index.html
+dist/
+!dist/everycred-verifier.js
+!dist/package.json

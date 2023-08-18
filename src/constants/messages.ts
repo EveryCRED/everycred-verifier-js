@@ -15,6 +15,8 @@ export enum Messages {
   CREDENTIAL_SUBJECT_KEY_SUCCESS = "Credential credential subject key is present in the certificate with valid data.",
   CREDENTIAL_SUBJECT_KEY_ERROR = "Credential credentialSubject key is not present or having invalid data in the credential.",
 
+  CREDENTIALS_VALIDATION_FAILED = 'Credential validation failed',
+
   PROOF_KEY_VALIDATE = "Checking credential proof...",
   PROOF_KEY_SUCCESS = "Credential proof key is present in the credential with valid data.",
   PROOF_KEY_ERROR = "Credential proof key is not present or having invalid data in the credential.",
@@ -67,9 +69,9 @@ export enum Messages {
   CONTEXT_REVOCATION_LIST_KEY_SUCCESS = "@context key is present in the revocation list with valid data.",
   CONTEXT_REVOCATION_LIST_KEY_ERROR = "@context key is not present or having invalid data in the revocation list.",
 
-  TYPE_REVOCATION_LIST_KEY_VALIDATE = "Checking revocation list @context...",
-  TYPE_REVOCATION_LIST_KEY_SUCCESS = "@context key is present in the revocation list with valid data.",
-  TYPE_REVOCATION_LIST_KEY_ERROR = "@context key is not present or having invalid data in the revocation list.",
+  TYPE_REVOCATION_LIST_KEY_VALIDATE = "Checking revocation list type",
+  TYPE_REVOCATION_LIST_KEY_SUCCESS = "type key is present in the revocation list with valid data.",
+  TYPE_REVOCATION_LIST_KEY_ERROR = "type key is not present or having invalid data in the revocation list.",
 
   ID_REVOCATION_LIST_KEY_VALIDATE = "Checking revocation list id...",
   ID_REVOCATION_LIST_KEY_SUCCESS = "id key is present in the revocation list with valid data.",
@@ -88,6 +90,7 @@ export enum Messages {
   VALID_UNTIL_DATE_KEY_ERROR = "credential is expired.",
 
   CERTIFICATE_REVOCATION_LIST_STATUS = "Credential is valid and not revoked.",
+  REVOCATION_STATUS_CHECK_FAILED = ' Revocation status check failed',
 
   FETCHING_NORMALIZED_DECODED_DATA = "Fetching normalized and decoded data started...",
   FETCHING_NORMALIZED_DECODED_DATA_SUCCESS = "Fetched normalized and decoded data successfully.",
@@ -127,4 +130,23 @@ export enum Messages {
   MERKLE_PROOF_2019_VALIDATION_STARTED = 'MerkleProof2019 validation started....',
   MERKLE_PROOF_2019_VALIDATION_SUCCESS = 'MerkleProof2019 validation successful.',
   MERKLE_PROOF_2019_VALIDATION_FAILED = 'MerkleProof2019 validation failed.',
+
+  AUTHENTICITY_VALIDATION = 'Authenticity Validation',
+  HASH_COMPARISON = 'Hash Comparison',
+  STATUS_CHECK = 'Status Check',
+
+  CHECKING_VALIDATION = 'Checking Validation',
+  VERIFY_AUTHENTICITY = 'Verifying Authenticity',
+
+  FORMAT_VALIDATION = 'Format Validation',
+  COMPARING_HASHES = 'Comparing Hashes',
+  COMPARING_MERKLE_ROOT = 'Checking Merkle Root',
+  CHECKING_HOLDER = 'Checking Holder',
+
+  CHECKING_REVOKE_STATUS = 'Checking Revoke Status',
+  CHECKING_AUTHENTICITY = 'Checking Authenticity',
+  CHECKING_EXPIRATION_DATE = 'Checking Expiration Date',
+
+  VERIFIED = 'Verified',
+  FAILED = 'Failed',
 }

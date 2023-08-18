@@ -6,6 +6,7 @@ import { Messages } from '../constants/messages';
 import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from '../utils/credential-util';
 import { logger } from '../utils/logger';
+import { sleep } from '../utils/sleep';
 
 export class MerkleProofValidator2019 {
   private credential: any;
@@ -13,8 +14,9 @@ export class MerkleProofValidator2019 {
   private normalizedDecodedData: any;
   private blockchainApiResponse: any;
   private isMerkleProofVerified: boolean = false;
+  networkName: string = '';
 
-  constructor() { }
+  constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   /**
    * The `validate` function performs a series of checks and validations on a given credential data
@@ -25,8 +27,7 @@ export class MerkleProofValidator2019 {
    * determine if the Merkle proof is valid.
    * @returns The function `validate` returns a Promise that resolves to a boolean value.
    */
-  async validate(credentialData: any): Promise<boolean> {
-    logger(Messages.MERKLE_PROOF_2019_VALIDATION_STARTED);
+  async validate(credentialData: any): Promise<{ message: string; status: boolean; networkName: string; }> {
     this.credential = deepCloneData(credentialData);
     this.normalizedDecodedData = await this.getNormalizedDecodedData();
     this.decodedData = getDataFromKey(
@@ -34,17 +35,13 @@ export class MerkleProofValidator2019 {
       CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
     );
 
-    const isSignatureValid = (
-      this.checkDecodedAnchors() &&
-      this.checkDecodedPath() &&
-      this.checkDecodedMerkleRoot() &&
-      this.checkDecodedTargetHash()
-    );
-
     if (
-      isSignatureValid &&
-      (await this.fetchDataFromBlockchainAPI()) &&
-      (await this.verifyMerkleProof(this.decodedData))
+      (await this.checkDecodedAnchors()).status &&
+      (await this.checkDecodedPath()).status &&
+      (await this.checkDecodedMerkleRoot()).status &&
+      (await this.checkDecodedTargetHash()).status &&
+      (await this.fetchDataFromBlockchainAPI()).status &&
+      (await this.verifyMerkleProof(this.decodedData)).status
     ) {
       const normalizedData = getDataFromKey(
         this.normalizedDecodedData,
@@ -53,18 +50,18 @@ export class MerkleProofValidator2019 {
       const encodedHash = await this.calculateHash(normalizedData);
 
       if (this.isMerkleProofVerified && encodedHash === this.decodedData.targetHash) {
-        logger(Messages.CALCULATED_HASH_MATCHES_WITH_TARGETHASH);
-        logger(Messages.MERKLE_PROOF_2019_VALIDATION_SUCCESS);
-        return true;
+        this.progressCallback(Messages.CHECKING_HOLDER, true);
+        return { message: '', status: true, networkName: this.networkName };
       } else {
+        this.progressCallback(Messages.CHECKING_HOLDER, false);
         logger(Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH, "error");
         logger(Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, "error");
-        return false;
+        return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
       }
     }
 
     logger(Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, "error");
-    return false;
+    return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
   }
 
   /**
@@ -74,19 +71,17 @@ export class MerkleProofValidator2019 {
    * an API or any other source.
    * @returns a boolean value.
    */
-  private validateNormalizedDecodedData(response: any): boolean {
-
-    logger(Messages.FETCHING_NORMALIZED_DECODED_DATA);
+  private validateNormalizedDecodedData(response: any): { message: string; status: boolean; } {
     if (
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue)
     ) {
-      logger(Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
-      return false;
+      this.failedAllStages();
+      logger(Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, "error");
+      return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, status: false };
     }
 
-    logger(Messages.FETCHING_NORMALIZED_DECODED_DATA_SUCCESS);
-    return true;
+    return { message: '', status: true };
   }
 
   /**
@@ -108,12 +103,15 @@ export class MerkleProofValidator2019 {
       body: formData,
     };
 
-    const response = await getDataFromAPI(apiUrl, options);
-    const apiResponse = response?.data;
-    const isValidResponse = this.validateNormalizedDecodedData(apiResponse);
+    try {
+      const apiResponse = (await getDataFromAPI(apiUrl, options))?.data;
+      const isValidResponse = this.validateNormalizedDecodedData(apiResponse).status;
 
-    if (isValidResponse) {
-      return apiResponse;
+      if (isValidResponse) {
+        return apiResponse;
+      }
+    } catch (error) {
+      this.failedAllStages();
     }
   }
 
@@ -132,7 +130,7 @@ export class MerkleProofValidator2019 {
    * tree.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async verifyMerkleProof(decodedData: any): Promise<boolean> {
+  private async verifyMerkleProof(decodedData: any): Promise<{ message: string; status: boolean; }> {
     const { targetHash, path, merkleRoot } = decodedData;
     let currentHash = targetHash;
 
@@ -149,14 +147,18 @@ export class MerkleProofValidator2019 {
     }
 
     this.isMerkleProofVerified = currentHash === merkleRoot;
-    logger(
-      this.isMerkleProofVerified
+
+    if (!this.isMerkleProofVerified) {
+      this.progressCallback(Messages.CHECKING_HOLDER, false);
+      logger(Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT, "error");
+    }
+
+    return {
+      message: this.isMerkleProofVerified
         ? Messages.CALCULATED_HASH_MATCHES_WITH_MERKLEROOT
         : Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT,
-      this.isMerkleProofVerified ? "log" : "error"
-    );
-
-    return this.isMerkleProofVerified;
+      status: this.isMerkleProofVerified
+    };
   }
 
   /**
@@ -165,8 +167,9 @@ export class MerkleProofValidator2019 {
    * @returns {boolean} - A boolean value indicating the presence of the key.
    * If the condition `pathData?.length` is true, it returns `true`. Otherwise, it returns `false`.
    */
-  private checkDecodedAnchors(): boolean {
-    logger(Messages.ANCHOR_DECODED_DATA_KEY_VALIDATE);
+  private async checkDecodedAnchors(): Promise<{ message: string; status: boolean; }> {
+    await sleep(250);
+
     if (
       isKeyPresent(
         this.decodedData,
@@ -179,12 +182,13 @@ export class MerkleProofValidator2019 {
       );
 
       if (anchorsData?.length) {
-        logger(Messages.ANCHOR_DECODED_DATA_KEY_SUCCESS);
-        return true;
+        this.progressCallback(Messages.FORMAT_VALIDATION, true);
+        return { message: '', status: true };
       }
     }
-    logger(Messages.ANCHOR_DECODED_DATA_KEY_ERROR, "error");
-    return false;
+
+    this.failedAllStages();
+    return { message: Messages.ANCHOR_DECODED_DATA_KEY_ERROR, status: false };
   }
 
   /**
@@ -193,19 +197,21 @@ export class MerkleProofValidator2019 {
    * @returns a boolean value. If the condition `pathData?.length` is true, it returns `true`. Otherwise,
    * it returns `false`.
    */
-  private checkDecodedPath(): boolean {
-    logger(Messages.PATH_DECODED_DATA_KEY_VALIDATE);
+  private async checkDecodedPath(): Promise<{ message: string; status: boolean; }> {
+    await sleep(500);
+
     if (
       isKeyPresent(
         this.decodedData,
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.path
       )
     ) {
-      logger(Messages.PATH_DECODED_DATA_KEY_SUCCESS);
-      return true;
+      return { message: '', status: true };
     }
+
+    this.failedThreeStages();
     logger(Messages.PATH_DECODED_DATA_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.PATH_DECODED_DATA_KEY_ERROR, status: false };
   }
 
   /**
@@ -214,8 +220,9 @@ export class MerkleProofValidator2019 {
    * @returns a boolean value. If the condition `merkleRootData?.length && typeof merkleRootData ===
    * 'string'` is true, it returns `true`. Otherwise, it returns `false`.
    */
-  private checkDecodedMerkleRoot(): boolean {
-    logger(Messages.MERKLEROOT_DECODED_DATA_KEY_VALIDATE);
+  private async checkDecodedMerkleRoot(): Promise<{ message: string; status: boolean; }> {
+    await sleep(750);
+
     if (
       isKeyPresent(
         this.decodedData,
@@ -227,12 +234,14 @@ export class MerkleProofValidator2019 {
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.merkleRoot
       );
       if (merkleRootData?.length && typeof merkleRootData === 'string') {
-        logger(Messages.MERKLEROOT_DECODED_DATA_KEY_SUCCESS);
-        return true;
+        this.progressCallback(Messages.COMPARING_HASHES, true);
+        return { message: '', status: true };
       }
     }
+
+    this.failedThreeStages();
     logger(Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR, status: false };
   }
 
   /**
@@ -241,8 +250,9 @@ export class MerkleProofValidator2019 {
    * @returns a boolean value. If the condition `targetHashData?.length && typeof targetHashData ===
    * 'string'` is true, it will return `true`. Otherwise, it will return `false`.
    */
-  private checkDecodedTargetHash(): boolean {
-    logger(Messages.TARGETHASH_DECODED_DATA_KEY_VALIDATE);
+  private async checkDecodedTargetHash(): Promise<{ message: string; status: boolean; }> {
+    await sleep(1000);
+
     if (
       isKeyPresent(
         this.decodedData,
@@ -254,12 +264,13 @@ export class MerkleProofValidator2019 {
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.targetHash
       );
       if (targetHashData?.length && typeof targetHashData === 'string') {
-        logger(Messages.TARGETHASH_DECODED_DATA_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedTwoStages();
     logger(Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, status: false };
   }
 
   /**
@@ -267,13 +278,14 @@ export class MerkleProofValidator2019 {
    * returns a boolean indicating whether the retrieval was successful.
    * @returns a boolean value.
    */
-  private async fetchDataFromBlockchainAPI(): Promise<boolean> {
+  private async fetchDataFromBlockchainAPI(): Promise<{ message: string; status: boolean; }> {
     // Fetching the selected anchor from decodedData
     const selectedAnchor = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':');
     if (!selectedAnchor) {
       // Logging an error when selectedAnchor retrieval fails
+      this.failedTwoStages();
       logger(Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR, "error");
-      return false;
+      return { message: Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR, status: false };
     }
 
     // Extracting blinkValue, networkType, and transactionID from selectedAnchor
@@ -285,8 +297,9 @@ export class MerkleProofValidator2019 {
 
     if (!blinkValue || !networkType || !transactionID) {
       // Logging an error when required values retrieval fails
+      this.failedTwoStages();
       logger(Messages.REQUIRED_VALUES_RETRIEVAL_ERROR, "error");
-      return false;
+      return { message: Messages.REQUIRED_VALUES_RETRIEVAL_ERROR, status: false };
     }
 
     // Retrieving baseAPIValue and baseNetworkValue using blinkValue and networkType
@@ -295,17 +308,21 @@ export class MerkleProofValidator2019 {
 
     if (!baseAPIValue || !baseNetworkValue) {
       // Logging an error when baseAPIValue or baseNetworkValue retrieval fails
+      this.failedTwoStages();
       logger(Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR, "error");
-      return false;
+      return { message: Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR, status: false };
     }
+
+    this.networkName = `${baseAPIValue}${baseNetworkValue}`;
 
     // Finding the matchedAPI based on baseAPIValue and baseNetworkValue
     const matchedAPI = BLOCKCHAIN_API_LIST.find(api => api.id === `${baseAPIValue}${baseNetworkValue}`);
 
     if (!matchedAPI) {
       // Logging an error when no matching API is found
+      this.failedTwoStages();
       logger(Messages.NO_MATCHING_API_FOUND_ERROR, "error");
-      return false;
+      return { message: Messages.NO_MATCHING_API_FOUND_ERROR, status: false };
     }
 
     // Retrieving the URL and apiKey from matchedAPI
@@ -314,8 +331,9 @@ export class MerkleProofValidator2019 {
 
     if (!url || !apiKey) {
       // Logging an error when URL or apiKey retrieval fails
+      this.failedTwoStages();
       logger(Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, "error");
-      return false;
+      return { message: Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, status: false };
     }
 
     // Building the final URL using buildTransactionUrl method
@@ -326,19 +344,20 @@ export class MerkleProofValidator2019 {
       this.blockchainApiResponse = await getDataFromAPI(finalUrl);
     } catch (error) {
       // Logging an error when the transaction is not found
+      this.failedTwoStages();
       logger(Messages.TRANSACTION_NOT_FOUND_ERROR, "error");
-      return false;
+      return { message: Messages.TRANSACTION_NOT_FOUND_ERROR, status: false };
     }
 
     if (!isEmpty(this.blockchainApiResponse)) {
-      // Logging success message when data is fetched successfully
-      logger(Messages.DATA_FETCHED_SUCCESS);
-      return true;
+      this.progressCallback(Messages.COMPARING_MERKLE_ROOT, true);
+      return { message: '', status: true };
     }
 
     // Logging an error when data fetch fails
+    this.failedTwoStages();
     logger(Messages.DATA_FETCHED_ERROR, "error");
-    return false;
+    return { message: Messages.DATA_FETCHED_ERROR, status: false };
   }
 
   /**
@@ -368,6 +387,21 @@ export class MerkleProofValidator2019 {
    */
   private async calculateHash(data: any) {
     return sha256(data);
+  }
+
+  private failedAllStages() {
+    this.progressCallback(Messages.FORMAT_VALIDATION, false);
+    this.failedThreeStages();
+  }
+
+  private failedThreeStages() {
+    this.progressCallback(Messages.COMPARING_HASHES, false);
+    this.failedTwoStages();
+  }
+
+  private failedTwoStages() {
+    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
+    this.progressCallback(Messages.CHECKING_HOLDER, false);
   }
 
 }

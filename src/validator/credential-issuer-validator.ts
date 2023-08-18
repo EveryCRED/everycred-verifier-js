@@ -10,13 +10,14 @@ import {
   isKeyPresent,
 } from "../utils/credential-util";
 import { logger } from "../utils/logger";
+import { sleep } from '../utils/sleep';
 
 export class CredentialIssuerValidator {
   private credential: any;
   private issuerProfileData: any;
   private revocationListData: any;
 
-  constructor() { }
+  constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   /**
    * This is an asynchronous function that validates credential data and returns the validation status
@@ -29,16 +30,21 @@ export class CredentialIssuerValidator {
    * set to that value, and `issuerProfileData`
    */
   async validate(credentialData: any): Promise<any> {
+    await sleep(250);
+
     this.credential = deepCloneData(credentialData);
-    let status = await this.validateCredentialIssuer();
+    let status = (await this.validateCredentialIssuer())?.status;
 
     if (status) {
+      this.progressCallback(Messages.VERIFY_AUTHENTICITY, true);
       return {
         issuerProfileValidationStatus: status,
         issuerProfileData: this.issuerProfileData,
         revocationListData: this.revocationListData,
       };
     }
+
+    this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);
     return {
       issuerProfileValidationStatus: status,
       issuerProfileData: null,
@@ -50,8 +56,7 @@ export class CredentialIssuerValidator {
    * This is a private async function that validates the credential issuer's profile data.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialIssuer(): Promise<boolean> {
-    logger(Messages.ISSUER_VALIDATION_STARTED);
+  private async validateCredentialIssuer(): Promise<{ message: string; status: boolean; }> {
     if (
       isKeyPresent(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer)
     ) {
@@ -60,35 +65,40 @@ export class CredentialIssuerValidator {
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
       );
       if (issuerData && new URL(issuerData)) {
-        logger(Messages.ISSUER_KEY_SUCCESS);
-        logger(Messages.FETCHING_ISSUER_PROFILE);
-        this.issuerProfileData = await getDataFromAPI(issuerData);
+        try {
+          this.issuerProfileData = await getDataFromAPI(issuerData);
+        } catch (error) {
+          this.failedAllStages();
+        }
 
-        if (this.issuerProfileData) {
-          logger(Messages.FETCHING_ISSUER_PROFILE_SUCCESS);
-        } else {
-          logger(Messages.FETCHING_ISSUER_PROFILE_ERROR);
+        if (!this.issuerProfileData) {
+          this.failedAllStages();
+          logger(Messages.FETCHING_ISSUER_PROFILE_ERROR, "error");
+          return { message: Messages.FETCHING_ISSUER_PROFILE_ERROR, status: false };
         }
 
         if (
           this.issuerProfileData &&
-          this.validateIssuerProfileContext() &&
-          this.validateCredentialType() &&
-          this.validateIssuerProfileID() &&
-          this.validateIssuerProfileName() &&
-          this.validateIssuerProfileEmail() &&
-          this.validateIssuerProfileRevocationList() &&
-          this.validateIssuerProfilePublicKey() &&
-          (await this.validateRevocationListFromIssuerProfile())
+          (await this.validateIssuerProfileContext()).status &&
+          this.validateCredentialType().status &&
+          this.validateIssuerProfileID().status &&
+          this.validateIssuerProfileName().status &&
+          this.validateIssuerProfileEmail().status &&
+          this.validateIssuerProfileRevocationList().status &&
+          this.validateIssuerProfilePublicKey().status &&
+          (await this.validateRevocationListFromIssuerProfile()).status
         ) {
-          logger(Messages.ISSUER_KEY_SUCCESS);
-          return true;
+          return { message: '', status: true };
         }
       }
     } else {
-      logger(Messages.ISSUER_KEY_ERROR);
+      this.failedAllStages();
+      logger(Messages.ISSUER_KEY_ERROR, "error");
+      return { message: Messages.ISSUER_KEY_ERROR, status: false };
     }
-    return false;
+
+    this.failedAllStages();
+    return { message: Messages.FETCHING_ISSUER_PROFILE_ERROR, status: false };
   }
 
   /**
@@ -97,8 +107,9 @@ export class CredentialIssuerValidator {
    * @returns This function returns a boolean value (either true or false) depending on whether the
    * validation of the issuer profile context is successful or not.
    */
-  private validateIssuerProfileContext(): boolean {
-    logger(Messages.CONTEXT_ISSUER_PROFILE_KEY_VALIDATE);
+  private async validateIssuerProfileContext(): Promise<{ message: string; status: boolean; }> {
+    await sleep(500);
+
     if (
       isKeyPresent(
         this.issuerProfileData,
@@ -110,19 +121,19 @@ export class CredentialIssuerValidator {
         ].includes(data)
       )
     ) {
-      logger(Messages.CONTEXT_ISSUER_PROFILE_KEY_SUCCESS);
-      return true;
+      return { message: '', status: true };
     }
+
+    this.failedAllStages();
     logger(Messages.CONTEXT_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.CONTEXT_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
    * This function validates the type of a credential issuer profile key.
    * @returns a boolean value.
    */
-  private validateCredentialType(): boolean {
-    logger(Messages.TYPE_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateCredentialType(): { message: string; status: boolean; } {
     if (
       isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.type)
     ) {
@@ -131,12 +142,13 @@ export class CredentialIssuerValidator {
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.type
       );
       if (CREDENTIALS_CONSTANTS.issuerProfileTypeSupported.includes(typeData)) {
-        logger(Messages.TYPE_ISSUER_PROFILE_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.TYPE_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.TYPE_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
@@ -144,8 +156,7 @@ export class CredentialIssuerValidator {
    * matches the issuer profile data.
    * @returns a boolean value, either true or false.
    */
-  private validateIssuerProfileID(): boolean {
-    logger(Messages.ID_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateIssuerProfileID(): { message: string; status: boolean; } {
     if (
       isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.id)
     ) {
@@ -161,12 +172,13 @@ export class CredentialIssuerValidator {
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
         )
       ) {
-        logger(Messages.ID_ISSUER_PROFILE_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.ID_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.ID_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
@@ -174,8 +186,7 @@ export class CredentialIssuerValidator {
    * validation was successful or not.
    * @returns a boolean value, either true or false.
    */
-  private validateIssuerProfileName(): boolean {
-    logger(Messages.NAME_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateIssuerProfileName(): { message: string; status: boolean; } {
     if (
       isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.name)
     ) {
@@ -184,12 +195,13 @@ export class CredentialIssuerValidator {
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.name
       );
       if (nameData) {
-        logger(Messages.NAME_ISSUER_PROFILE_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.NAME_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.NAME_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
@@ -197,8 +209,7 @@ export class CredentialIssuerValidator {
    * indicating whether it is present or not.
    * @returns a boolean value, either true or false.
    */
-  private validateIssuerProfileEmail(): boolean {
-    logger(Messages.EMAIL_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateIssuerProfileEmail(): { message: string; status: boolean; } {
     if (
       isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.email)
     ) {
@@ -207,20 +218,20 @@ export class CredentialIssuerValidator {
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.email
       );
       if (emailData) {
-        logger(Messages.EMAIL_ISSUER_PROFILE_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.EMAIL_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.EMAIL_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
    * This function validates the revocation list key in the issuer profile data.
    * @returns A boolean value is being returned.
    */
-  private validateIssuerProfileRevocationList(): boolean {
-    logger(Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateIssuerProfileRevocationList(): { message: string; status: boolean; } {
     if (
       isKeyPresent(
         this.issuerProfileData,
@@ -232,12 +243,13 @@ export class CredentialIssuerValidator {
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
       );
       if (revocationListData && new URL(revocationListData)) {
-        logger(Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
@@ -245,8 +257,7 @@ export class CredentialIssuerValidator {
    * whether the validation was successful or not.
    * @returns A boolean value is being returned.
    */
-  private validateIssuerProfilePublicKey(): boolean {
-    logger(Messages.PUBLIC_KEY_ISSUER_PROFILE_KEY_VALIDATE);
+  private validateIssuerProfilePublicKey(): { message: string; status: boolean; } {
     if (
       isKeyPresent(
         this.issuerProfileData,
@@ -257,7 +268,7 @@ export class CredentialIssuerValidator {
         this.issuerProfileData,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.publicKey
       );
-      if (publicKeyData && publicKeyData.length) {
+      if (publicKeyData?.length) {
         for (const index in publicKeyData) {
           let flag = false;
           if (
@@ -269,14 +280,15 @@ export class CredentialIssuerValidator {
           }
 
           if (!flag) {
-            logger(Messages.PUBLIC_KEY_ISSUER_PROFILE_KEY_SUCCESS);
-            return true;
+            return { message: '', status: true };
           }
         }
       }
     }
+
+    this.failedAllStages();
     logger(Messages.PUBLIC_KEY_ISSUER_PROFILE_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.PUBLIC_KEY_ISSUER_PROFILE_KEY_ERROR, status: false };
   }
 
   /**
@@ -284,8 +296,7 @@ export class CredentialIssuerValidator {
    * success or failure.
    * @returns A Promise that resolves to a boolean value.
    */
-  private async validateRevocationListFromIssuerProfile(): Promise<boolean> {
-    logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE);
+  private async validateRevocationListFromIssuerProfile(): Promise<{ message: string; status: boolean; }> {
     if (this.issuerProfileData) {
       this.revocationListData = await getDataFromAPI(
         getDataFromKey(
@@ -294,11 +305,18 @@ export class CredentialIssuerValidator {
         )
       );
       if (this.revocationListData) {
-        logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS);
-        return true;
+        this.progressCallback(Messages.CHECKING_VALIDATION, true);
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR, "error");
-    return false;
+    return { message: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR, status: false };
+  }
+
+  private failedAllStages() {
+    this.progressCallback(Messages.CHECKING_VALIDATION, false);
+    this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);
   }
 }

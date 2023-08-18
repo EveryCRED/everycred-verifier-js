@@ -12,54 +12,45 @@ import {
   isKeyPresent
 } from "../utils/credential-util";
 import { logger } from "../utils/logger";
+import { sleep } from '../utils/sleep';
 
 export class RevocationStatusCheck {
   private credential: any;
   private issuerProfileData: any;
   private revocationListData: any;
 
-  constructor() { }
+  constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   async validate(
     revocationListData: any,
     credentialData: any,
     issuerProfileData: any
-  ): Promise<any> {
+  ): Promise<{ message: string; status: boolean; }> {
     this.credential = deepCloneData(credentialData);
     this.issuerProfileData = deepCloneData(issuerProfileData);
     this.revocationListData = deepCloneData(revocationListData);
 
-    return await this.statusRevocationCheck();
-  }
+    const result = await this.statusRevocationCheck();
 
-  /**
-   * The function checks various conditions related to revocation and returns true if all conditions are
-   * met, otherwise it returns false.
-   * @returns The method is returning a boolean value. If all the conditions in the if statement are
-   * true, then it returns true. Otherwise, it returns false.
-   */
-  private statusRevocationCheck(): boolean {
-    if (
-      this.checkRevocationContext() &&
-      this.checkRevocationType() &&
-      this.checkRevocationID() &&
-      this.checkRevocationIssuer() &&
-      this.checkRevocationRevokedAssertions() &&
-      this.checkValidUntilDate()
-    ) {
-      return true;
+    if (!result) {
+      this.failedAllStages();
     }
 
-    return false;
+    return { message: result ? '' : Messages.REVOCATION_STATUS_CHECK_FAILED, status: result, };
   }
 
-  /**
-   * This function checks if a specific key is present in a data object and if its value matches certain
-   * predefined values, returning true if successful and false otherwise.
-   * @returns a boolean value - either true or false.
-   */
-  private checkRevocationContext(): boolean {
-    logger(Messages.CONTEXT_REVOCATION_LIST_KEY_VALIDATE);
+  private async statusRevocationCheck(): Promise<boolean> {
+    return (await this.checkRevocationContext()).status &&
+      this.checkRevocationType().status &&
+      this.checkRevocationID().status &&
+      (await this.checkRevocationIssuer()).status &&
+      this.checkRevocationRevokedAssertions().status &&
+      (await this.checkValidUntilDate()).status;
+  }
+
+  private async checkRevocationContext(): Promise<{ message: string; status: boolean; }> {
+    await sleep(250);
+
     if (
       isKeyPresent(
         this.revocationListData,
@@ -69,41 +60,33 @@ export class RevocationStatusCheck {
         this.revocationListData[REVOCATION_STATUS_CHECK_KEYS.context].includes(data)
       )
     ) {
-      logger(Messages.CONTEXT_REVOCATION_LIST_KEY_SUCCESS);
-      return true;
+      return { message: '', status: true };
     }
+
+    this.failedAllStages();
     logger(Messages.CONTEXT_REVOCATION_LIST_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.CONTEXT_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
-  /**
-   * This function checks if the revocation list type is supported and returns a boolean value.
-   * @returns a boolean value, either true or false.
-   */
-  private checkRevocationType(): boolean {
-    logger(Messages.TYPE_REVOCATION_LIST_KEY_VALIDATE);
+  private checkRevocationType(): { message: string; status: boolean; } {
     if (isKeyPresent(this.credential, REVOCATION_STATUS_CHECK_KEYS.type)) {
       let typeData: string[] = getDataFromKey(
         this.revocationListData,
         REVOCATION_STATUS_CHECK_KEYS.type
       );
 
-      if (
-        typeData.includes(CREDENTIALS_CONSTANTS.revocation_list_type_supported)
-      ) {
-        logger(Messages.TYPE_REVOCATION_LIST_KEY_SUCCESS);
-        return true;
+      if (typeData.includes(CREDENTIALS_CONSTANTS.revocation_list_type_supported)) {
+        this.progressCallback(Messages.CHECKING_REVOKE_STATUS, true);
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.TYPE_REVOCATION_LIST_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.TYPE_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
-  /* The `checkRevocationID()` function is checking if the ID of the credential being validated matches
-  the ID of the revocation list in the issuer profile data. If the IDs match, it logs a success
-  message and returns `true`, otherwise it logs an error message and returns `false`. */
-  private checkRevocationID(): boolean {
-    logger(Messages.ID_REVOCATION_LIST_KEY_VALIDATE);
+  private checkRevocationID(): { message: string; status: boolean; } {
     if (isKeyPresent(this.credential, REVOCATION_STATUS_CHECK_KEYS.id)) {
       let idData = getDataFromKey(
         this.revocationListData,
@@ -116,21 +99,18 @@ export class RevocationStatusCheck {
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
         )
       ) {
-        logger(Messages.ID_REVOCATION_LIST_KEY_SUCCESS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.ID_REVOCATION_LIST_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.ID_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
-  /**
-   * This function checks if the issuer of a credential is present in a revocation list and returns a
-   * boolean value based on the result.
-   * @returns A boolean value is being returned.
-   */
-  private checkRevocationIssuer(): boolean {
-    logger(Messages.ISSUER_REVOCATION_LIST_KEY_VALIDATE);
+  private async checkRevocationIssuer(): Promise<{ message: string; status: boolean; }> {
+    await sleep(350);
+
     if (isKeyPresent(this.credential, REVOCATION_STATUS_CHECK_KEYS.issuer)) {
       let issuerData = getDataFromKey(
         this.revocationListData,
@@ -143,21 +123,17 @@ export class RevocationStatusCheck {
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.id
         )
       ) {
-        logger(Messages.ISSUER_REVOCATION_LIST_KEY_SUCCESS);
-        return true;
+        this.progressCallback(Messages.CHECKING_AUTHENTICITY, true);
+        return { message: '', status: true };
       }
     }
+
+    this.failedAllStages();
     logger(Messages.ISSUER_REVOCATION_LIST_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.ISSUER_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
-  /**
-   * This function checks if a credential has been revoked by looking for its ID in a revocation list.
-   * @returns a boolean value.
-   */
-  private checkRevocationRevokedAssertions(): boolean {
-    logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE);
-
+  private checkRevocationRevokedAssertions(): { message: string; status: boolean; } {
     if (
       isKeyPresent(
         this.revocationListData,
@@ -169,51 +145,54 @@ export class RevocationStatusCheck {
         REVOCATION_STATUS_CHECK_KEYS.revokedAssertions
       );
 
-      if (revokedAssertionsData && revokedAssertionsData.length) {
-        logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_SUCCESS);
+      if (revokedAssertionsData?.length) {
         let data = revokedAssertionsData.filter(
           (data: any) => data.id === this.credential.id
         );
 
         if (data.length) {
-          logger(getDataFromKey(data, ['0', 'revocationReason']));
-          return false; // terminate and display reason from the array
+          return { message: getDataFromKey(data, ['0', 'revocationReason']), status: false };
         }
       } else {
-        logger(Messages.CERTIFICATE_REVOCATION_LIST_STATUS);
-        return true;
+        return { message: '', status: true };
       }
     }
+
+    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
     logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, "error");
-    return false;
+    return { message: Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
-  /**
-   * The function `checkValidUntilDate` checks if a validUntilDate key is present in the credential
-   * object, and if so, validates if the date is not expired.
-   * @returns a boolean value.
-   */
-  private checkValidUntilDate(): boolean {
+  private async checkValidUntilDate(): Promise<{ message: string; status: boolean; }> {
+    await sleep(400);
+
     if (
       isKeyPresent(
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.validUntilDate
       )
     ) {
-      logger(Messages.VALID_UNTIL_DATE_KEY_VALIDATE);
       let validUntilDate = getDataFromKey(
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.validUntilDate
       );
 
       if (validUntilDate && !isDateExpired(validUntilDate)) {
-        logger(Messages.VALID_UNTIL_DATE_KEY_SUCCESS);
-        return true;
+        this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, true);
+        return { message: '', status: true };
       }
 
-      logger(Messages.VALID_UNTIL_DATE_KEY_ERROR, "error");
-      return false;
+      this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+      return { message: Messages.VALID_UNTIL_DATE_KEY_ERROR, status: false };
     }
-    return true;
+
+    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, true);
+    return { message: '', status: true };
   }
+
+  private failedAllStages(): void {
+    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
+    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+  }
+
 }

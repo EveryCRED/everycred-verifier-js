@@ -8,53 +8,51 @@ import {
   CREDENTIALS_CONSTANTS,
   CREDENTIALS_VALIDATORS_KEYS,
 } from "../constants/common";
-import { Messages } from "../constants/messages";
-import { logger } from "../utils/logger";
+import { Messages } from '../constants/messages';
+import { logger } from '../utils/logger';
 
 export class CredentialValidator {
   private credential: any;
+  private progressCallback: (step: string, status: boolean) => void;
 
-  constructor() { }
+  constructor(progressCallback: (step: string, status: boolean) => void) {
+    this.progressCallback = progressCallback;
+  }
 
-  /**
-   * The function validates a credential's data and returns a boolean value indicating whether the
-   * validation was successful or not.
-   * @param {any} credentialData - It is an object containing the data of a credential that needs to be
-   * validated.
-   * @returns A boolean value is being returned, either true or false.
-   */
-  validate(credentialData: any): boolean {
+  async validate(credentialData: any): Promise<{ message: string; status: boolean; }> {
     this.credential = deepCloneData(credentialData);
 
     if (
-      this.validateCredentialType() &&
-      this.validateCredentialContext() &&
-      this.validateCredentialID() &&
-      this.validateCredentialCredentialSubject() &&
-      this.validateCredentialProof() &&
-      this.validateCredentialIssuanceDate()
+      await this.validateCredentialType() &&
+      await this.validateCredentialContext() &&
+      await this.validateCredentialID() &&
+      await this.validateCredentialCredentialSubject() &&
+      await this.validateCredentialProof() &&
+      await this.validateCredentialIssuanceDate()
     ) {
-      return true;
+      return { message: '', status: true };
     }
-    return false;
+
+    this.failedAllStages();
+    return { message: Messages.CREDENTIALS_VALIDATION_FAILED, status: false };
   }
 
   /**
    * This function validates the type of a verifiable credential.
    * @returns a boolean value, either true or false.
    */
-  private validateCredentialType(): boolean {
-    logger(Messages.TYPE_KEY_VALIDATE);
+  private async validateCredentialType(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.type)) {
       let typeData: string[] = getDataFromKey(
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.type
       );
       if (typeData.includes(CREDENTIALS_CONSTANTS.verifiable_credential)) {
-        logger(Messages.TYPE_KEY_SUCCESS);
         return true;
       }
     }
+
+    this.failedAllStages();
     logger(Messages.TYPE_KEY_ERROR, "error");
     return false;
   }
@@ -64,22 +62,20 @@ export class CredentialValidator {
    * valid or not.
    * @returns a boolean value, either true or false.
    */
-  private validateCredentialContext(): boolean {
-    logger(Messages.CONTEXT_KEY_VALIDATE);
+  private async validateCredentialContext(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.context)) {
       let contextData: string[] = getDataFromKey(
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.context
       );
       if (
-        CREDENTIALS_CONSTANTS.context_values.some((data) =>
-          contextData.includes(data)
-        )
+        CREDENTIALS_CONSTANTS.context_values.some((data) => contextData.includes(data))
       ) {
-        logger(Messages.CONTEXT_KEY_SUCCESS);
         return true;
       }
     }
+
+    this.failedAllStages();
     logger(Messages.CONTEXT_KEY_ERROR, "error");
     return false;
   }
@@ -89,18 +85,14 @@ export class CredentialValidator {
    * whether the validation was successful or not.
    * @returns A boolean value is being returned.
    */
-  private validateCredentialID(): boolean {
-    logger(Messages.ID_KEY_VALIDATE);
+  private async validateCredentialID(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
-      let idData = getDataFromKey(
-        this.credential,
-        CREDENTIALS_VALIDATORS_KEYS.id
-      );
-      if (idData) {
-        logger(Messages.ID_KEY_SUCCESS);
+      if (getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
         return true;
       }
     }
+
+    this.failedAllStages();
     logger(Messages.ID_KEY_ERROR, "error");
     return false;
   }
@@ -110,8 +102,7 @@ export class CredentialValidator {
    * a given credential object.
    * @returns A boolean value is being returned.
    */
-  private validateCredentialCredentialSubject(): boolean {
-    logger(Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE);
+  private async validateCredentialCredentialSubject(): Promise<boolean> {
     if (
       isKeyPresent(
         this.credential,
@@ -139,11 +130,12 @@ export class CredentialValidator {
         }
 
         if (!flag) {
-          logger(Messages.CREDENTIAL_SUBJECT_KEY_SUCCESS);
           return true;
         }
       }
     }
+
+    this.failedAllStages();
     logger(Messages.CREDENTIAL_SUBJECT_KEY_ERROR, "error");
     return false;
   }
@@ -152,8 +144,7 @@ export class CredentialValidator {
    * This function validates the proof key in a credential object.
    * @returns A boolean value is being returned.
    */
-  private validateCredentialProof(): boolean {
-    logger(Messages.PROOF_KEY_VALIDATE);
+  private async validateCredentialProof(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
       let proofData = getDataFromKey(
         this.credential,
@@ -181,11 +172,12 @@ export class CredentialValidator {
             (data) => proofData.type === data
           )
         ) {
-          logger(Messages.PROOF_KEY_SUCCESS);
           return true;
         }
       }
     }
+
+    this.failedAllStages();
     logger(Messages.PROOF_KEY_ERROR, "error");
     return false;
   }
@@ -194,8 +186,7 @@ export class CredentialValidator {
    * This function validates the issuance date of a credential.
    * @returns a boolean value, either true or false.
    */
-  private validateCredentialIssuanceDate(): boolean {
-    logger(Messages.ISSUANCE_DATE_KEY_VALIDATE);
+  private async validateCredentialIssuanceDate(): Promise<boolean> {
     if (
       isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.issuanceDate)
     ) {
@@ -204,11 +195,26 @@ export class CredentialValidator {
         CREDENTIALS_VALIDATORS_KEYS.issuanceDate
       );
       if (issuanceDateData) {
-        logger(Messages.ISSUANCE_DATE_KEY_SUCCESS);
         return true;
       }
     }
+
+    this.failedAllStages();
     logger(Messages.ISSUANCE_DATE_KEY_ERROR, "error");
     return false;
+  }
+
+  private failedAllStages() {
+    this.progressCallback(Messages.CHECKING_VALIDATION, false);
+    this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);
+
+    this.progressCallback(Messages.FORMAT_VALIDATION, false);
+    this.progressCallback(Messages.COMPARING_HASHES, false);
+    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
+    this.progressCallback(Messages.CHECKING_HOLDER, false);
+
+    this.progressCallback(Messages.CHECKING_REVOKE_STATUS, false);
+    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
+    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
   }
 }
