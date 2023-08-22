@@ -83,10 +83,10 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
 }
 
 export const BLOCKCHAIN_API_LIST = [
-  { id: "ethereumMainnet", url: "https://api.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
-  { id: "ethereumSepolia", url: "https://api-sepolia.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
-  { id: "polygonMainnet", url: "https://api.polygonscan.com/api", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
-  { id: "polygonTestnet", url: "https://api-testnet.polygonscan.com/api", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+  { id: "ethereumMainnet", url: "https://api.etherscan.io/", apiKey: "9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7" },
+  { id: "ethereumSepolia", url: "https://api-sepolia.etherscan.io/", apiKey: "9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7" },
+  { id: "polygonMainnet", url: "https://api.polygonscan.com/", apiKey: "Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955" },
+  { id: "polygonTestnet", url: "https://api-testnet.polygonscan.com/", apiKey: "Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955" },
 ];
 
 export enum BASE_API {
