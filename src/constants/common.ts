@@ -85,15 +85,19 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
 export const BLOCKCHAIN_API_LIST = [
   { id: "ethereumMainnet", url: "https://api.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
   { id: "ethereumSepolia", url: "https://api-sepolia.etherscan.io/", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+  { id: "polygonMainnet", url: "https://api.polygonscan.com/api", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
+  { id: "polygonTestnet", url: "https://api-testnet.polygonscan.com/api", apiKey: "FJ3CZWH8PQBV8W5U6JR8TMKAYDHBKQ3B1D" },
 ];
 
 export enum BASE_API {
   eth = "ethereum",
+  poly = "polygon",
 }
 
 export enum BASE_NETWORK {
   sepolia = "Sepolia",
-  mainnet = "Mainnet"
+  mainnet = "Mainnet",
+  testnet = "Testnet",
 }
 
 export enum GENERAL_KEYWORDS {
