@@ -19,13 +19,11 @@ export class MerkleProofValidator2019 {
   constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   /**
-   * The `validate` function performs a series of checks and validations on a given credential data
-   * using a Merkle proof algorithm and returns a boolean indicating whether the validation was
-   * successful or not.
+   * The `validate` function performs various checks and validations on a given credential data and
+   * returns a status and message indicating whether the validation was successful or not.
    * @param {any} credentialData - The `credentialData` parameter is an object that contains the data
-   * needed for validating a Merkle proof. It is used to perform various checks and calculations to
-   * determine if the Merkle proof is valid.
-   * @returns The function `validate` returns a Promise that resolves to a boolean value.
+   * needed for validation. It is passed to the `validate` function as an argument.
+   * @returns an object with the properties `message`, `status`, and `networkName`.
    */
   async validate(credentialData: any): Promise<{ message: string; status: boolean; networkName: string; }> {
     this.credential = deepCloneData(credentialData);
@@ -65,11 +63,11 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function validates the normalized decoded data by checking if certain keys are present in the
-   * response object.
-   * @param {any} response - The `response` parameter is an object that contains the data received from
-   * an API or any other source.
-   * @returns a boolean value.
+   * The function validates the normalized decoded data and returns a status and message.
+   * @param {any} response - The `response` parameter is an object that contains data received from an
+   * API or some other source.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string value, and the "status" property contains a boolean value.
    */
   private validateNormalizedDecodedData(response: any): { message: string; status: boolean; } {
     if (
@@ -85,8 +83,8 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function sends a POST request to an API with a JSON payload, validates the response, and
-   * returns the response if it is valid.
+   * The function `getNormalizedDecodedData` sends a POST request to an API with a JSON payload,
+   * retrieves the response, validates it, and returns the response if it is valid.
    * @returns a Promise that resolves to an object of type `any`.
    */
   private async getNormalizedDecodedData(): Promise<any> {
@@ -116,19 +114,14 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function verifies a Merkle proof by calculating the hash of a target hash and a series of proof
-   * elements, and checking if the resulting hash matches the Merkle root.
+   * The function `verifyMerkleProof` takes in decoded data and verifies the Merkle proof by calculating
+   * the hash and comparing it with the Merkle root.
    * @param {any} decodedData - The `decodedData` parameter is an object that contains the following
    * properties:
-   * @param {string} target_hash - The target_hash parameter is a string representing the hash of the
-   * target data that you want to verify in the Merkle tree.
-   * @param {string[]} proof - An array of strings representing the proof path in the Merkle tree. Each
-   * element in the array represents a sibling node in the path, starting from the leaf node and ending
-   * at the root node.
-   * @param {string} merkle_root - The `merkle_root` parameter is a string representing the root hash of
-   * the Merkle tree. It is the topmost hash in the tree and serves as a summary of all the data in the
-   * tree.
-   * @returns a Promise that resolves to a boolean value.
+   * @returns The function `verifyMerkleProof` returns an object with two properties: `message` and
+   * `status`. The `message` property contains a string message indicating whether the calculated hash
+   * matches with the merkle root or not. The `status` property is a boolean value indicating whether the
+   * merkle proof is verified or not.
    */
   private async verifyMerkleProof(decodedData: any): Promise<{ message: string; status: boolean; }> {
     const { targetHash, path, merkleRoot } = decodedData;
@@ -162,10 +155,10 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * Checks if a specific key is present in the `decodedData` object and returns true if it is,
-   * otherwise returns false.
-   * @returns {boolean} - A boolean value indicating the presence of the key.
-   * If the condition `pathData?.length` is true, it returns `true`. Otherwise, it returns `false`.
+   * The function checks if the decoded anchors data is present and returns a status and message
+   * accordingly.
+   * @returns an object with two properties: "message" and "status". The "message" property is a string
+   * and the "status" property is a boolean.
    */
   private async checkDecodedAnchors(): Promise<{ message: string; status: boolean; }> {
     await sleep(250);
@@ -192,10 +185,12 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function checks if a specific key is present in the `decodedData` object
-   * and returns true if it is, otherwise it returns false.
-   * @returns a boolean value. If the condition `pathData?.length` is true, it returns `true`. Otherwise,
-   * it returns `false`.
+   * The function `checkDecodedPath` checks if a specific key is present in the `decodedData` object and
+   * returns a status and message accordingly.
+   * @returns an object with two properties: "message" and "status". The "message" property is an empty
+   * string if a certain condition is met, otherwise it is set to the value of
+   * "Messages.PATH_DECODED_DATA_KEY_ERROR". The "status" property is set to true if the condition is
+   * met, otherwise it is set to false.
    */
   private async checkDecodedPath(): Promise<{ message: string; status: boolean; }> {
     await sleep(500);
@@ -215,10 +210,10 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function checks if a merkle root signature is present in the decoded data and returns true if
-   * it is, otherwise it returns false.
-   * @returns a boolean value. If the condition `merkleRootData?.length && typeof merkleRootData ===
-   * 'string'` is true, it returns `true`. Otherwise, it returns `false`.
+   * The function checks if a decoded merkle root is present and returns a message and status
+   * indicating success or failure.
+   * @returns a Promise that resolves to an object with two properties: "message" and "status". The
+   * "message" property is a string and the "status" property is a boolean.
    */
   private async checkDecodedMerkleRoot(): Promise<{ message: string; status: boolean; }> {
     await sleep(750);
@@ -245,10 +240,10 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function checks if a target hash is present in the decoded data and returns true if it is,
-   * otherwise it returns false.
-   * @returns a boolean value. If the condition `targetHashData?.length && typeof targetHashData ===
-   * 'string'` is true, it will return `true`. Otherwise, it will return `false`.
+   * The function checks if the target hash is present in the decoded data and returns a status and
+   * message accordingly.
+   * @returns an object with two properties: "message" and "status". The "message" property is a string
+   * and the "status" property is a boolean.
    */
   private async checkDecodedTargetHash(): Promise<{ message: string; status: boolean; }> {
     await sleep(1000);
@@ -274,9 +269,10 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function `getHashFromBlockchain` retrieves a transaction hash from a blockchain API and
-   * returns a boolean indicating whether the retrieval was successful.
-   * @returns a boolean value.
+   * The function fetchDataFromBlockchainAPI is an asynchronous function that fetches data from a
+   * blockchain API and performs various error handling and logging operations.
+   * @returns The function `fetchDataFromBlockchainAPI` returns a Promise that resolves to an object
+   * with two properties: `message` and `status`.
    */
   private async fetchDataFromBlockchainAPI(): Promise<{ message: string; status: boolean; }> {
     // Fetching the selected anchor from decodedData
@@ -362,15 +358,14 @@ export class MerkleProofValidator2019 {
 
   /**
    * The function builds a transaction URL by concatenating the base URL, endpoint, and query parameters.
-   * @param {string} url - The `url` parameter is a string representing the base URL of the API endpoint
-   * you want to call. It should include the protocol (e.g., "https://") and the domain name (e.g.,
-   * "api.example.com").
+   * @param {string} url - The `url` parameter is the base URL of the API endpoint you want to call. It
+   * should be a string representing the URL of the API server.
    * @param {string} apiKey - The `apiKey` parameter is a string that represents the API key required to
-   * access the API endpoint. It is used to authenticate the user and ensure that only authorized users
-   * can access the endpoint.
+   * access the API endpoint. This key is used to authenticate the user and ensure that only authorized
+   * users can access the endpoint.
    * @param {string} transactionID - The `transactionID` parameter is a string that represents the hash
    * of a transaction in the Ethereum blockchain.
-   * @returns a string that represents a transaction URL.
+   * @returns a string that represents the complete transaction URL.
    */
   private async buildTransactionUrl(url: string, apiKey: string, transactionID: string): Promise<string> {
     const endpoint = "api?module=proxy&action=eth_getTransactionByHash";
@@ -380,15 +375,20 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function calculates the SHA256 hash of a given string asynchronously.
-   * @param {string} data - The `data` parameter is a string that represents the input data for which you
-   * want to calculate the hash.
-   * @returns The calculateHash function is returning the SHA256 hash of the input data.
+   * The function calculates the SHA256 hash of the given data.
+   * @param {any} data - The `data` parameter is the input data for which you want to calculate the hash.
+   * It can be of any type, such as a string, number, object, or array.
+   * @returns The calculateHash function is returning the result of the sha256 function, which is the
+   * hash value of the input data.
    */
   private async calculateHash(data: any) {
     return sha256(data);
   }
 
+  /**  The below code is defining a series of private methods in a TypeScript class.
+   * Each method calls a `progressCallback` function with a specific message and a `false` value.
+   * The `progressCallback` function is likely used to update the progress of some operation or task. The methods are called in a cascading manner, with each method calling the next one in the sequence.
+  */
   private failedAllStages() {
     this.progressCallback(Messages.FORMAT_VALIDATION, false);
     this.failedThreeStages();

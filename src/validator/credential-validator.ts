@@ -19,6 +19,14 @@ export class CredentialValidator {
     this.progressCallback = progressCallback;
   }
 
+  /**
+   * The function `validate` is an asynchronous function that validates a credential object and returns
+   * a message and status indicating whether the validation was successful or not.
+   * @param {any} credentialData - The `credentialData` parameter is an object that contains the data
+   * of a credential.
+   * @returns The function `validate` returns a promise that resolves to an object with two properties:
+   * `message` and `status`.
+   */
   async validate(credentialData: any): Promise<{ message: string; status: boolean; }> {
     this.credential = deepCloneData(credentialData);
 
@@ -38,8 +46,9 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates the type of a verifiable credential.
-   * @returns a boolean value, either true or false.
+   * The function `validateCredentialType` checks if a specific type of credential is present in the
+   * `credential` object and returns a boolean value indicating whether it is valid or not.
+   * @returns a Promise that resolves to a boolean value.
    */
   private async validateCredentialType(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.type)) {
@@ -58,9 +67,10 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates a credential context and returns a boolean value indicating whether it is
-   * valid or not.
-   * @returns a boolean value, either true or false.
+   * The function `validateCredentialContext` checks if a specific key is present in a credential
+   * object and if its value matches certain predefined values, returning true if it does and false
+   * otherwise.
+   * @returns a Promise that resolves to a boolean value.
    */
   private async validateCredentialContext(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.context)) {
@@ -81,9 +91,9 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates the ID key in a credential object and returns a boolean value indicating
-   * whether the validation was successful or not.
-   * @returns A boolean value is being returned.
+   * The function "validateCredentialID" checks if a specific key is present in a credential object and
+   * returns true if it is, otherwise it logs an error message and returns false.
+   * @returns a Promise that resolves to a boolean value.
    */
   private async validateCredentialID(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
@@ -98,9 +108,9 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates the presence and correctness of required keys in the credential subject of
-   * a given credential object.
-   * @returns A boolean value is being returned.
+   * The function `validateCredentialCredentialSubject` checks if the required keys are present in the
+   * `credentialSubject` object and returns true if they are, otherwise it returns false.
+   * @returns a Promise<boolean>.
    */
   private async validateCredentialCredentialSubject(): Promise<boolean> {
     if (
@@ -141,8 +151,9 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates the proof key in a credential object.
-   * @returns A boolean value is being returned.
+   * The function `validateCredentialProof` checks if a proof key is present in a credential object and
+   * validates its data.
+   * @returns a Promise<boolean>.
    */
   private async validateCredentialProof(): Promise<boolean> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
@@ -183,8 +194,9 @@ export class CredentialValidator {
   }
 
   /**
-   * This function validates the issuance date of a credential.
-   * @returns a boolean value, either true or false.
+   * The function validates the issuance date of a credential and returns true if it is present,
+   * otherwise it returns false and logs an error message.
+   * @returns a Promise that resolves to a boolean value.
    */
   private async validateCredentialIssuanceDate(): Promise<boolean> {
     if (
@@ -204,6 +216,10 @@ export class CredentialValidator {
     return false;
   }
 
+  /**
+   * The function "failedAllStages" updates the progress status of various stages in a validation
+   * process to indicate failure.
+   */
   private failedAllStages() {
     this.progressCallback(Messages.CHECKING_VALIDATION, false);
     this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);

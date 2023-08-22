@@ -20,14 +20,12 @@ export class CredentialIssuerValidator {
   constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   /**
-   * This is an asynchronous function that validates credential data and returns the validation status
-   * along with issuer profile and revocation list data.
-   * @param {any} credentialData - The data that needs to be validated for a credential.
-   * @returns The function `validate` returns an object with three properties:
-   * `issuerProfileValidationStatus`, `issuerProfileData`, and `revocationListData`. The values of
-   * these properties depend on the result of the `validateCredentialIssuer` function. If
-   * `validateCredentialIssuer` returns a truthy value, then `issuerProfileValidationStatus` will be
-   * set to that value, and `issuerProfileData`
+   * The `validate` function takes in `credentialData`, performs some asynchronous operations,
+   * validates the credential issuer, and returns an object with the validation status, issuer profile
+   * data, and revocation list data.
+   * @param {any} credentialData - The `credentialData` parameter is an object that contains the data
+   * of a credential. It is used to validate the issuer of the credential.
+   * @returns The function `validate` returns an object with the following properties:
    */
   async validate(credentialData: any): Promise<any> {
     await sleep(250);
@@ -53,8 +51,9 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This is a private async function that validates the credential issuer's profile data.
-   * @returns a Promise that resolves to a boolean value.
+   * The function `validateCredentialIssuer` validates the issuer profile data of a credential.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string message, and the "status" property contains a boolean value.
    */
   private async validateCredentialIssuer(): Promise<{ message: string; status: boolean; }> {
     if (
@@ -102,10 +101,9 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the issuer profile context and returns a boolean value indicating whether
-   * it is valid or not.
-   * @returns This function returns a boolean value (either true or false) depending on whether the
-   * validation of the issuer profile context is successful or not.
+   * The function validates the issuer profile context and returns a message and status indicating
+   * whether the validation was successful or not.
+   * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async validateIssuerProfileContext(): Promise<{ message: string; status: boolean; }> {
     await sleep(500);
@@ -130,8 +128,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the type of a credential issuer profile key.
-   * @returns a boolean value.
+   * The function validates the credential type in the issuer profile data and returns a message and
+   * status indicating whether the validation was successful or not.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string message, and the "status" property contains a boolean value.
    */
   private validateCredentialType(): { message: string; status: boolean; } {
     if (
@@ -152,9 +152,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the issuer profile ID by checking if it is present in the credential and
-   * matches the issuer profile data.
-   * @returns a boolean value, either true or false.
+   * The function validates the issuer profile ID and returns a message and status indicating whether
+   * the validation was successful or not.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string value, and the "status" property contains a boolean value.
    */
   private validateIssuerProfileID(): { message: string; status: boolean; } {
     if (
@@ -182,9 +183,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the issuer profile name and returns a boolean value indicating whether the
-   * validation was successful or not.
-   * @returns a boolean value, either true or false.
+   * The function `validateIssuerProfileName` checks if the name key is present in the issuer profile
+   * data and returns a status and message accordingly.
+   * @returns an object with two properties: "message" and "status". The "message" property is a string
+   * and the "status" property is a boolean.
    */
   private validateIssuerProfileName(): { message: string; status: boolean; } {
     if (
@@ -205,9 +207,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the email key in the issuer profile data and returns a boolean value
-   * indicating whether it is present or not.
-   * @returns a boolean value, either true or false.
+   * The function validates the email field in an issuer profile and returns a message and status
+   * indicating whether the validation was successful or not.
+   * @returns an object with two properties: "message" and "status". The "message" property is a string
+   * and the "status" property is a boolean.
    */
   private validateIssuerProfileEmail(): { message: string; status: boolean; } {
     if (
@@ -228,8 +231,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the revocation list key in the issuer profile data.
-   * @returns A boolean value is being returned.
+   * The function validates the revocation list key in the issuer profile data and returns a status and
+   * message.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string value, and the "status" property contains a boolean value.
    */
   private validateIssuerProfileRevocationList(): { message: string; status: boolean; } {
     if (
@@ -253,9 +258,10 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates the issuer profile public key and returns a boolean value indicating
+   * The function validates the issuer profile public key and returns a message and status indicating
    * whether the validation was successful or not.
-   * @returns A boolean value is being returned.
+   * @returns an object with two properties: "message" and "status". The "message" property contains a
+   * string message, and the "status" property contains a boolean value.
    */
   private validateIssuerProfilePublicKey(): { message: string; status: boolean; } {
     if (
@@ -292,9 +298,8 @@ export class CredentialIssuerValidator {
   }
 
   /**
-   * This function validates a revocation list from an issuer profile and returns a boolean indicating
-   * success or failure.
-   * @returns A Promise that resolves to a boolean value.
+   * This function validates a revocation list from an issuer profile.
+   * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async validateRevocationListFromIssuerProfile(): Promise<{ message: string; status: boolean; }> {
     if (this.issuerProfileData) {
@@ -315,6 +320,10 @@ export class CredentialIssuerValidator {
     return { message: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR, status: false };
   }
 
+  /**
+   * The function "failedAllStages" updates the progress callback for two stages, "CHECKING_VALIDATION"
+   * and "VERIFY_AUTHENTICITY", to indicate that they have failed.
+   */
   private failedAllStages() {
     this.progressCallback(Messages.CHECKING_VALIDATION, false);
     this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);

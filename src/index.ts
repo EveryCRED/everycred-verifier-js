@@ -16,15 +16,21 @@ export class EveryCredVerifier {
   private checksumValidation: boolean = false;
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
-  private progressCallback: (step: string, status: boolean) => void;
 
-  constructor(progressCallback: (step: string, status: boolean) => void) {
-    this.progressCallback = progressCallback;
-  }
+  constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
-  verify = async (
-    certificate: any,
-  ) => {
+  /**
+   * The function verifies a certificate by performing credential validation, checksum validation, and
+   * revocation status check, and returns a message and status indicating whether the verification was
+   * successful or not.
+   * @param {any} certificate - The `certificate` parameter is an object that represents a certificate.
+   * It is passed to the `verify` function for validation.
+   * @returns The function `verify` returns an object with the properties `message`, `status`, and
+   * `networkName`. The values of these properties depend on the outcome of the validation process. If
+   * all validations pass, the `message` property will be set to `Messages.VERIFIED`, the `status`
+   * property will be set to `true`, and the `networkName` property will be set to the
+   */
+  async verify(certificate: any) {
     this.certificate = deepCloneData(certificate);
 
     this.credentialValidation = await this.validateCredentials();
@@ -46,6 +52,12 @@ export class EveryCredVerifier {
     return { message: Messages.FAILED, status: false, networkName: '' };
   };
 
+  /**
+   * The function `validateCredentials` is an asynchronous function that validates credentials by using
+   * a credential validator and a credential issuer validator, and returns a boolean indicating whether
+   * the validation was successful.
+   * @returns a Promise<boolean>.
+   */
   private async validateCredentials(): Promise<boolean> {
     await sleep(250);
 
@@ -70,6 +82,11 @@ export class EveryCredVerifier {
     return false;
   }
 
+  /**
+   * The function `validateChecksum` is a private asynchronous function that validates a checksum using
+   * a MerkleProofValidator2019 and returns a boolean indicating whether the validation was successful.
+   * @returns a Promise<boolean>.
+   */
   private async validateChecksum(): Promise<boolean> {
     await sleep(500);
 
@@ -86,6 +103,11 @@ export class EveryCredVerifier {
     return this.checksumValidation;
   }
 
+  /**
+   * The function `revocationStatusCheck` is an asynchronous function that performs a revocation status
+   * check and returns a boolean indicating the validation status.
+   * @returns a boolean value, which is the value of the variable `this.revocationStatusValidation`.
+   */
   private async revocationStatusCheck(): Promise<boolean> {
     await sleep(750);
 
@@ -99,6 +121,10 @@ export class EveryCredVerifier {
     return this.revocationStatusValidation;
   }
 
+  /**
+   * The function "failedTwoStages" updates the progress callback for several messages and then calls
+   * another function.
+   */
   private failedTwoStages() {
     this.progressCallback(Messages.HASH_COMPARISON, false);
 
@@ -110,6 +136,10 @@ export class EveryCredVerifier {
     this.failedLastStage();
   }
 
+  /**
+   * The function "failedLastStage" updates the progress status by calling the "progressCallback"
+   * function with different messages.
+   */
   private failedLastStage() {
     this.progressCallback(Messages.STATUS_CHECK, false);
 
