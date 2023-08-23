@@ -6,6 +6,3 @@ tsconfig.json
 node_modules/
 .vscode
 index.html
-dist/
-!dist/everycred-verifier.js
-!dist/package.json
