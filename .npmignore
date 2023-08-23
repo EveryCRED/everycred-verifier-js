@@ -1,4 +1,5 @@
 # Files and directories to ignore when publishing to npm
+
 src/
 tsconfig.json
 *.config.js

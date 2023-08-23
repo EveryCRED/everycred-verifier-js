@@ -10,6 +10,7 @@
     "verifiable credentials"
   ],
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc -p \".\"",
@@ -26,7 +27,7 @@
     "jsonld": "^8.2.0",
     "lodash": "^4.17.21",
     "sha256": "^0.2.0",
-    "typescript": "^5.1.3"
+    "typescript": "^5.1.6"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.1.1",

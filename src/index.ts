@@ -1,7 +1,8 @@
 import { get } from "lodash";
 import { MerkleProofValidator2019 } from './checksum/merkle-proof-2019-validation';
+import { Messages } from './constants/messages';
 import { deepCloneData } from "./utils/credential-util";
-import { logger } from './utils/logger';
+import { sleep } from './utils/sleep';
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
 import { CredentialValidator } from "./validator/credential-validator";
 import { RevocationStatusCheck } from './validator/revocation-status-check';
@@ -13,82 +14,138 @@ export class EveryCredVerifier {
   private credentialValidation: boolean = false;
   private credentialIssuerValidation: boolean = false;
   private checksumValidation: boolean = false;
+  private revocationStatusValidation: boolean = false;
+  private networkName: string = '';
 
-  constructor() { }
+  constructor(private progressCallback: (step: string, status: boolean) => void) { }
 
   /**
-   * This function is main entry point of the credential verifier.
+   * The function verifies a certificate by performing credential validation, checksum validation, and
+   * revocation status check, and returns a message and status indicating whether the verification was
+   * successful or not.
+   * @param {any} certificate - The `certificate` parameter is an object that represents a certificate.
+   * It is passed to the `verify` function for validation.
+   * @returns The function `verify` returns an object with the properties `message`, `status`, and
+   * `networkName`. The values of these properties depend on the outcome of the validation process. If
+   * all validations pass, the `message` property will be set to `Messages.VERIFIED`, the `status`
+   * property will be set to `true`, and the `networkName` property will be set to the
    */
-  verify = async (certificate: any) => {
+  async verify(certificate: any) {
     this.certificate = deepCloneData(certificate);
 
-    if (!(await this.validateCredentials()) || !(await this.revocationStatusCheck())) {
-      logger('CREDENTIAL VALIDATION FAILED');
-      return false; // Stop program execution if any check fails
+    this.credentialValidation = await this.validateCredentials();
+
+    if (this.credentialValidation) {
+      this.checksumValidation = await this.validateChecksum();
+
+      if (this.checksumValidation) {
+        this.revocationStatusValidation = await this.revocationStatusCheck();
+
+        if (this.revocationStatusValidation) {
+          this.progressCallback(Messages.VERIFIED, true);
+          return { message: Messages.VERIFIED, status: true, networkName: this.networkName };
+        }
+      }
     }
 
-    if (!(await this.validateChecksum())) {
-      logger('CHECKSUM VALIDATION FAILED');
-      return false; // Stop program execution if any check fails
-    }
-    logger('CHECKSUM VALIDATION SUCCESSFUL');
-    logger('CREDENTIAL VALIDATION SUCCESSFUL');
-
-    return true;
+    this.progressCallback(Messages.FAILED, false);
+    return { message: Messages.FAILED, status: false, networkName: '' };
   };
 
   /**
-   * This function validates credentials using a CredentialValidator and CredentialIssuerValidator, and
-   * retrieves issuer profile and revocation list data if validation is successful.
+   * The function `validateCredentials` is an asynchronous function that validates credentials by using
+   * a credential validator and a credential issuer validator, and returns a boolean indicating whether
+   * the validation was successful.
+   * @returns a Promise<boolean>.
    */
   private async validateCredentials(): Promise<boolean> {
-    this.credentialValidation = new CredentialValidator().validate(
-      this.certificate
-    );
-    if (this.credentialValidation) {
-      let data = await new CredentialIssuerValidator().validate(
-        this.certificate
-      );
-      this.credentialIssuerValidation = get(
-        data,
-        "issuerProfileValidationStatus"
-      );
+    await sleep(250);
+
+    const credentialValidator = new CredentialValidator(this.progressCallback);
+    const result = await credentialValidator.validate(this.certificate);
+
+    if (result.status) {
+      let data = await new CredentialIssuerValidator(this.progressCallback).validate(this.certificate);
+
+      this.credentialIssuerValidation = get(data, "issuerProfileValidationStatus");
       this.issuerProfileData = get(data, "issuerProfileData");
       this.revocationListData = get(data, "revocationListData");
     }
 
-    if (this.credentialValidation && this.credentialIssuerValidation) {
+    if (result.status && this.credentialIssuerValidation) {
+      this.progressCallback(Messages.AUTHENTICITY_VALIDATION, true);
       return true;
-    };
+    }
+
+    this.failedTwoStages();
+    this.progressCallback(Messages.AUTHENTICITY_VALIDATION, false);
     return false;
   }
 
   /**
-   * This is a private asynchronous function that performs a revocation status check on a certificate
-   * using data from a revocation list and an issuer profile.
+   * The function `validateChecksum` is a private asynchronous function that validates a checksum using
+   * a MerkleProofValidator2019 and returns a boolean indicating whether the validation was successful.
+   * @returns a Promise<boolean>.
    */
-  private async revocationStatusCheck() {
-    this.credentialIssuerValidation = await new RevocationStatusCheck().validate(
-      this.revocationListData,
-      this.certificate,
-      this.issuerProfileData
-    );
+  private async validateChecksum(): Promise<boolean> {
+    await sleep(500);
 
-    return this.credentialIssuerValidation;
+    const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate);
+    this.checksumValidation = validate?.status;
+    this.networkName = validate.networkName;
+
+    this.progressCallback(Messages.HASH_COMPARISON, this.checksumValidation);
+
+    if (!this.checksumValidation) {
+      this.failedLastStage();
+    }
+
+    return this.checksumValidation;
   }
 
   /**
-   * The function `validateChecksum` is a private asynchronous method that uses the
-   * `MerkleProofValidator2019` class to validate a certificate's checksum and returns the result.
-   * @returns the result of the checksum validation, which is stored in the variable
-   * `this.checksumValidation`.
+   * The function `revocationStatusCheck` is an asynchronous function that performs a revocation status
+   * check and returns a boolean indicating the validation status.
+   * @returns a boolean value, which is the value of the variable `this.revocationStatusValidation`.
    */
-  private async validateChecksum() {
-    this.checksumValidation = await new MerkleProofValidator2019().validate(
-      this.certificate
-    );
+  private async revocationStatusCheck(): Promise<boolean> {
+    await sleep(750);
 
-    return this.checksumValidation;
+    this.revocationStatusValidation = (await new RevocationStatusCheck(this.progressCallback).validate(
+      this.revocationListData,
+      this.certificate,
+      this.issuerProfileData
+    )).status;
+
+    this.progressCallback(Messages.STATUS_CHECK, this.revocationStatusValidation);
+    return this.revocationStatusValidation;
+  }
+
+  /**
+   * The function "failedTwoStages" updates the progress callback for several messages and then calls
+   * another function.
+   */
+  private failedTwoStages() {
+    this.progressCallback(Messages.HASH_COMPARISON, false);
+
+    this.progressCallback(Messages.FORMAT_VALIDATION, false);
+    this.progressCallback(Messages.COMPARING_HASHES, false);
+    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
+    this.progressCallback(Messages.CHECKING_HOLDER, false);
+
+    this.failedLastStage();
+  }
+
+  /**
+   * The function "failedLastStage" updates the progress status by calling the "progressCallback"
+   * function with different messages.
+   */
+  private failedLastStage() {
+    this.progressCallback(Messages.STATUS_CHECK, false);
+
+    this.progressCallback(Messages.CHECKING_REVOKE_STATUS, false);
+    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
+    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
   }
 
 }
