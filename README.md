@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.0 :bookmark_tabs:
+Version: 1.0.1 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -87,4 +87,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.0 of the EveryCRED Verifier JS does not support the Open Badges Standards.
+Version 1.0.1 of the EveryCRED Verifier JS does not support the Open Badges Standards.
