@@ -81,3 +81,12 @@ export function isDateExpired(dateString: string): boolean {
 
   return currentDate > dateToCheck;
 }
+
+/**
+ * The function checks if an object is empty.
+ * @param {any} data - The `data` parameter is of type `any`, which means it can accept any data type.
+ * @returns a boolean value, indicating whether the given object is empty or not.
+ */
+export function isObjectEmpty(data: any): boolean {
+  return isEmpty(data);
+}

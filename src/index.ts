@@ -8,12 +8,12 @@ import { CredentialValidator } from "./validator/credential-validator";
 import { RevocationStatusCheck } from './validator/revocation-status-check';
 
 export class EveryCredVerifier {
-  private certificate: any;
-  private issuerProfileData: any;
-  private revocationListData: any;
+  private certificate: any = {};
+  private issuerProfileData: any = {};
+  private revocationListData: any = {};
+  private isChecksumValidated: boolean = false;
   private credentialValidation: boolean = false;
   private credentialIssuerValidation: boolean = false;
-  private checksumValidation: boolean = false;
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
 
@@ -32,22 +32,27 @@ export class EveryCredVerifier {
    */
   async verify(certificate: any) {
     this.certificate = deepCloneData(certificate);
-
     this.credentialValidation = await this.validateCredentials();
 
     if (this.credentialValidation) {
-      this.checksumValidation = await this.validateChecksum();
+      this.isChecksumValidated = await this.validateChecksum();
 
-      if (this.checksumValidation) {
+      if (this.isChecksumValidated) {
         this.revocationStatusValidation = await this.revocationStatusCheck();
 
         if (this.revocationStatusValidation) {
           this.progressCallback(Messages.VERIFIED, true);
+          this.certificate = {};
+          this.issuerProfileData = {};
+          this.revocationListData = {};
           return { message: Messages.VERIFIED, status: true, networkName: this.networkName };
         }
       }
     }
 
+    this.certificate = {};
+    this.issuerProfileData = {};
+    this.revocationListData = {};
     this.progressCallback(Messages.FAILED, false);
     return { message: Messages.FAILED, status: false, networkName: '' };
   };
@@ -91,16 +96,16 @@ export class EveryCredVerifier {
     await sleep(500);
 
     const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate);
-    this.checksumValidation = validate?.status;
+    this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName;
 
-    this.progressCallback(Messages.HASH_COMPARISON, this.checksumValidation);
+    this.progressCallback(Messages.HASH_COMPARISON, this.isChecksumValidated);
 
-    if (!this.checksumValidation) {
+    if (!this.isChecksumValidated) {
       this.failedLastStage();
     }
 
-    return this.checksumValidation;
+    return this.isChecksumValidated;
   }
 
   /**
