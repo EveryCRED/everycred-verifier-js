@@ -49,10 +49,6 @@ export class RevocationStatusCheck {
 
     const result = await this.statusRevocationCheck();
 
-    if (!result) {
-      this.failedAllStages();
-    }
-
     return { message: result ? '' : Messages.REVOCATION_STATUS_CHECK_FAILED, status: result, };
   }
 
@@ -190,20 +186,21 @@ export class RevocationStatusCheck {
         REVOCATION_STATUS_CHECK_KEYS.revokedAssertions
       )
     ) {
-      let revokedAssertionsData = getDataFromKey(
+      const revokedAssertionsData = getDataFromKey(
         this.revocationListData,
         REVOCATION_STATUS_CHECK_KEYS.revokedAssertions
       );
 
-      if (revokedAssertionsData?.length) {
-        let data = revokedAssertionsData.filter(
+      if (Array.isArray(revokedAssertionsData)) {
+        const revokedData = revokedAssertionsData.filter(
           (data: any) => data.id === this.credential.id
         );
 
-        if (data.length) {
-          return { message: getDataFromKey(data, ['0', 'revocationReason']), status: false };
+        if (revokedData.length) {
+          this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+          return { message: getDataFromKey(revokedData[0], ['0', 'revocationReason']), status: false };
         }
-      } else {
+
         return { message: '', status: true };
       }
     }

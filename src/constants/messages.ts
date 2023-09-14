@@ -15,7 +15,7 @@ export enum Messages {
   CREDENTIAL_SUBJECT_KEY_SUCCESS = "Credential credential subject key is present in the certificate with valid data.",
   CREDENTIAL_SUBJECT_KEY_ERROR = "Credential credentialSubject key is not present or having invalid data in the credential.",
 
-  CREDENTIALS_VALIDATION_FAILED = 'Credential validation failed',
+  CREDENTIALS_VALIDATION_FAILED = "Credential validation failed",
 
   PROOF_KEY_VALIDATE = "Checking credential proof...",
   PROOF_KEY_SUCCESS = "Credential proof key is present in the credential with valid data.",
@@ -90,7 +90,7 @@ export enum Messages {
   VALID_UNTIL_DATE_KEY_ERROR = "credential is expired.",
 
   CERTIFICATE_REVOCATION_LIST_STATUS = "Credential is valid and not revoked.",
-  REVOCATION_STATUS_CHECK_FAILED = ' Revocation status check failed',
+  REVOCATION_STATUS_CHECK_FAILED = "Revocation status check failed",
 
   FETCHING_NORMALIZED_DECODED_DATA = "Fetching normalized and decoded data started...",
   FETCHING_NORMALIZED_DECODED_DATA_SUCCESS = "Fetched normalized and decoded data successfully.",
@@ -112,41 +112,41 @@ export enum Messages {
   TARGETHASH_DECODED_DATA_KEY_SUCCESS = "targetHash key is present with valid data.",
   TARGETHASH_DECODED_DATA_KEY_ERROR = "targetHash key is not present or having invalid data list.",
 
-  SELECTED_ANCHOR_RETRIEVAL_ERROR = 'Failed to retrieve selected anchor.',
-  REQUIRED_VALUES_RETRIEVAL_ERROR = 'Failed to retrieve required values from the selected anchor.',
-  BASE_API_OR_NETWORK_RETRIEVAL_ERROR = 'Failed to retrieve base API or base network value.',
-  NO_MATCHING_API_FOUND_ERROR = 'No matching API found.',
-  URL_OR_APIKEY_RETRIEVAL_ERROR = 'Failed to retrieve URL or API key from the matched API.',
-  TRANSACTION_NOT_FOUND_ERROR = 'Transaction not found.',
-  DATA_FETCHED_ERROR = 'Failed to fetch data from the blockchain API.',
-  DATA_FETCHED_SUCCESS = 'Data successfully fetched from the blockchain API.',
+  SELECTED_ANCHOR_RETRIEVAL_ERROR = "Failed to retrieve selected anchor.",
+  REQUIRED_VALUES_RETRIEVAL_ERROR = "Failed to retrieve required values from the selected anchor.",
+  BASE_API_OR_NETWORK_RETRIEVAL_ERROR = "Failed to retrieve base API or base network value.",
+  NO_MATCHING_API_FOUND_ERROR = "No matching API found.",
+  URL_OR_APIKEY_RETRIEVAL_ERROR = "Failed to retrieve URL or API key from the matched API.",
+  TRANSACTION_NOT_FOUND_ERROR = "Transaction not found.",
+  DATA_FETCHED_ERROR = "Failed to fetch data from the blockchain API.",
+  DATA_FETCHED_SUCCESS = "Data successfully fetched from the blockchain API.",
 
-  CALCULATED_HASH_DIFFER_FROM_MERKLEROOT = 'The calculated hash does not match the provided merkleRoot.',
-  CALCULATED_HASH_MATCHES_WITH_MERKLEROOT = 'The calculated hash matches the provided merkleRoot.',
+  CALCULATED_HASH_DIFFER_FROM_MERKLEROOT = "The calculated hash does not match the provided merkleRoot.",
+  CALCULATED_HASH_MATCHES_WITH_MERKLEROOT = "The calculated hash matches the provided merkleRoot.",
 
-  CALCULATED_HASH_DIFFER_FROM_TARGETHASH = 'The calculated hash does not match the provided targetHash.',
-  CALCULATED_HASH_MATCHES_WITH_TARGETHASH = 'The calculated hash matches the provided targetHash.',
+  CALCULATED_HASH_DIFFER_FROM_TARGETHASH = "The calculated hash does not match the provided targetHash.",
+  CALCULATED_HASH_MATCHES_WITH_TARGETHASH = "The calculated hash matches the provided targetHash.",
 
-  MERKLE_PROOF_2019_VALIDATION_STARTED = 'MerkleProof2019 validation started....',
-  MERKLE_PROOF_2019_VALIDATION_SUCCESS = 'MerkleProof2019 validation successful.',
-  MERKLE_PROOF_2019_VALIDATION_FAILED = 'MerkleProof2019 validation failed.',
+  MERKLE_PROOF_2019_VALIDATION_STARTED = "MerkleProof2019 validation started....",
+  MERKLE_PROOF_2019_VALIDATION_SUCCESS = "MerkleProof2019 validation successful.",
+  MERKLE_PROOF_2019_VALIDATION_FAILED = "MerkleProof2019 validation failed.",
 
-  AUTHENTICITY_VALIDATION = 'Authenticity Validation',
-  HASH_COMPARISON = 'Hash Comparison',
-  STATUS_CHECK = 'Status Check',
+  AUTHENTICITY_VALIDATION = "Authenticity Validation",
+  HASH_COMPARISON = "Hash Comparison",
+  STATUS_CHECK = "Status Check",
 
-  CHECKING_VALIDATION = 'Checking Validation',
-  VERIFY_AUTHENTICITY = 'Verifying Authenticity',
+  CHECKING_VALIDATION = "Checking Validation",
+  VERIFY_AUTHENTICITY = "Verifying Authenticity",
 
-  FORMAT_VALIDATION = 'Format Validation',
-  COMPARING_HASHES = 'Comparing Hashes',
-  COMPARING_MERKLE_ROOT = 'Checking Merkle Root',
-  CHECKING_HOLDER = 'Checking Holder',
+  FORMAT_VALIDATION = "Format Validation",
+  COMPARING_HASHES = "Comparing Hashes",
+  COMPARING_MERKLE_ROOT = "Checking Merkle Root",
+  CHECKING_HOLDER = "Checking Holder",
 
-  CHECKING_REVOKE_STATUS = 'Checking Revoke Status',
-  CHECKING_AUTHENTICITY = 'Checking Authenticity',
-  CHECKING_EXPIRATION_DATE = 'Checking Expiration Date',
+  CHECKING_REVOKE_STATUS = "Checking Revoke Status",
+  CHECKING_AUTHENTICITY = "Checking Authenticity",
+  CHECKING_EXPIRATION_DATE = "Checking Expiration Date",
 
-  VERIFIED = 'Verified',
-  FAILED = 'Failed',
+  VERIFIED = "Verified",
+  FAILED = "Failed",
 }

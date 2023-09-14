@@ -18,7 +18,7 @@ export const CREDENTIALS_CONSTANTS = {
     "proofValue",
     "verificationMethod",
   ],
-  proofTypeSupported: ["MerkleProof2019"],
+  proofTypeSupported: ["MerkleProof2019", 'AES-128'],
   issuer_profile_context_values: [
     "https://www.w3.org/2018/credentials/v1",
     "https://www.w3.org/2018/credentials/v2",
@@ -80,6 +80,9 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
   path = "path",
   merkleRoot = "merkleRoot",
   targetHash = "targetHash",
+  proofValue = 'proofValue',
+  AES_128_KEY = 'AES_128_KEY',
+  AES_128_IV = 'AES_128_IV',
 }
 
 export const BLOCKCHAIN_API_LIST = [
@@ -107,7 +110,8 @@ export enum GENERAL_KEYWORDS {
 
 export const MERKLE_TREE = {
   validation_api: "/user/credential/markel_tree_verification?merkel_tree_data=",
-  data_type: "normalize_data"
+  data_type: "normalize_data",
+  algorithm: "&algorithm="
 };
 
 export enum HTTP_METHODS {
@@ -116,4 +120,9 @@ export enum HTTP_METHODS {
   PUT = 'PUT',
   PATCH = 'PATCH',
   DELETE = 'DELETE',
+}
+
+export enum ALGORITHM_TYPES {
+  MERKLEPROOF = 'MerkleProof2019',
+  AES = 'AES-128'
 }

@@ -8,12 +8,12 @@ import { CredentialValidator } from "./validator/credential-validator";
 import { RevocationStatusCheck } from './validator/revocation-status-check';
 
 export class EveryCredVerifier {
-  private certificate: any;
-  private issuerProfileData: any;
-  private revocationListData: any;
+  private certificate: any = {};
+  private issuerProfileData: any = {};
+  private revocationListData: any = {};
+  private checksumValidation: boolean = false;
   private credentialValidation: boolean = false;
   private credentialIssuerValidation: boolean = false;
-  private checksumValidation: boolean = false;
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
 
@@ -32,7 +32,6 @@ export class EveryCredVerifier {
    */
   async verify(certificate: any) {
     this.certificate = deepCloneData(certificate);
-
     this.credentialValidation = await this.validateCredentials();
 
     if (this.credentialValidation) {
@@ -43,11 +42,17 @@ export class EveryCredVerifier {
 
         if (this.revocationStatusValidation) {
           this.progressCallback(Messages.VERIFIED, true);
+          this.certificate = {};
+          this.issuerProfileData = {};
+          this.revocationListData = {};
           return { message: Messages.VERIFIED, status: true, networkName: this.networkName };
         }
       }
     }
 
+    this.certificate = {};
+    this.issuerProfileData = {};
+    this.revocationListData = {};
     this.progressCallback(Messages.FAILED, false);
     return { message: Messages.FAILED, status: false, networkName: '' };
   };
