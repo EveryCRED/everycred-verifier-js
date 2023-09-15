@@ -56,7 +56,6 @@ The verifier performs detailed verification steps on the package:
      - Verify the support for the current proof type ("MerkleProof2019").
    - **DisplayHtml (Optional)** :heavy_check_mark:: Check the existence of the "displayHtml" field.
    - **IssuanceDate** :heavy_check_mark:: Check the existence of the "issuanceDate" field.
-</br>
 
 2. **Checksum Match (Hash Comparison)** :arrows_clockwise:: Compare hashes to ensure the integrity of the credential.
    - **Note**: For the first version, only "MerkleProof2019" is supported.
@@ -68,7 +67,6 @@ The verifier performs detailed verification steps on the package:
                   - **AES_128_IV** and **AES_128_KEY** will be used to decode the **proofValue**. You can find this data in the **proof** field.
                   - You'll have to pass the AES encryption KEY and IV parsed into the UTF-8 format to ensure it's in the correct encoding for decryption.
                   - The decryption mode used for encryption is Cipher Block Chaining (CBC), which is a common mode for AES encryption.
-</br>
 
    - Validate the existence of the "anchors" keyword with valid data.
    - Ensure that the following key fields exist in your credentials:
@@ -87,7 +85,6 @@ The verifier performs detailed verification steps on the package:
    - Handle API responses:
      - Success: Retrieve the data and get the hash of the credentials from the transaction data.
      - Error: Return the error from the API or indicate transaction lookup errors or transaction not found errors.
-</br>
 
 3. **Status Check** :vertical_traffic_light::
    - **Revocation** :no_entry_sign:: Check if the "revocationList" exists in the credential and fetch the revocation list details.
