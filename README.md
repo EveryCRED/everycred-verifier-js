@@ -60,15 +60,43 @@ The verifier performs detailed verification steps on the package:
 2. **Checksum Match (Hash Comparison)** :arrows_clockwise:: Compare hashes to ensure the integrity of the credential.
    - **Note**: For the first version, only "MerkleProof2019" is supported.
    - Decode "proofValue" and extract signature details.
-   - Validate the existence of the "anchors" keyword
+      - There are two algorithms to decode the "proofValue":
+          - First, using **merkleProof** algorithm. This will be used for the previously issued credentials.
+          - Second using **Advanced Encryption Standard(AES)** algorithm. This will be used for the new credentials.
+              - Below is the decoding method for AES:
+                  ```typescript
+                    import CryptoJS from 'crypto-js';
 
-   - Check the existence of "path", "merkleRoot", "TargetHash", and "anchors".
-   - Ensure that "anchors" has a value in the form of an array.
+                    decrypt(proof: any) {
+                      const { proofValue } = proof;
+                      const iv = proof.proofDecodingKeys.AES_128_IV;
+                      const key = proof.proofDecodingKeys.AES_128_KEY;
+
+                      return CryptoJS.AES.decrypt(
+                        proofValue,
+                        CryptoJS.enc.Utf8.parse(key),
+                        { iv: CryptoJS.enc.Utf8.parse(iv), mode: CryptoJS.mode.CBC }
+                        ).toString(CryptoJS.enc.Utf8);
+                    }
+                  ```
+                where,
+                  - **AES_128_IV** and **AES_128_KEY** will be used to decode the **proofValue**.
+                  - **Note**: You can find this data in the **proof** field.
+
+   - Validate the existence of the "anchors" keyword with valid data.
+   - Ensure that the following key fields exist in your credentials:
+    "path"
+    "merkleRoot"
+    "TargetHash"
+    "anchors"
    - Separate the transaction ID and blink value.
    - Apply chain condition and call the corresponding API:
-     - ethereumMainnet
-     - ethereumRopsten
+     - EthereumMainnet
+     - EthereumRopsten
      - EthereumSepolia
+     - PolygonMainnet
+     - PolygonTestnet
+
    - Handle API responses:
      - Success: Retrieve the data and get the hash of the credentials from the transaction data (#Hash1).
      - Error: Return the error from the API or indicate transaction lookup errors or transaction not found errors.
