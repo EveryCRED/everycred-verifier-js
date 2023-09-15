@@ -61,7 +61,7 @@ The verifier performs detailed verification steps on the package:
    - **Note**: For the first version, only "MerkleProof2019" is supported.
    - Decode "proofValue" and extract signature details.
       - There are two algorithms to decode the "proofValue":
-          - First, using **merkleProof** algorithm. This will be used for the previously issued credentials.
+          - First, using **MerkleProof2019** algorithm. This will be used for the previously issued credentials.
           - Second using **Advanced Encryption Standard(AES)** algorithm. This will be used for the new credentials.
               - Below is the decoding method for AES:
                   ```typescript
