@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.0 :bookmark_tabs:
+Version: 1.0.1 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -60,17 +60,30 @@ The verifier performs detailed verification steps on the package:
 2. **Checksum Match (Hash Comparison)** :arrows_clockwise:: Compare hashes to ensure the integrity of the credential.
    - **Note**: For the first version, only "MerkleProof2019" is supported.
    - Decode "proofValue" and extract signature details.
-   - Validate the existence of the "anchors" keyword
+      - There are two algorithms to decode the "proofValue":
+          - First, using **MerkleProof2019** algorithm. This will be used for the previously issued credentials.
+          - Second using **Advanced Encryption Standard(AES)** algorithm. This will be used for the new credentials.
+              - Below is the details for decoding the data for AES algorithm:
+                  - **AES_128_IV** and **AES_128_KEY** will be used to decode the **proofValue**. You can find this data in the **proof** field.
+                  - You'll have to pass the AES encryption KEY and IV parsed into the UTF-8 format to ensure it's in the correct encoding for decryption.
+                  - The decryption mode used for encryption is Cipher Block Chaining (CBC), which is a common mode for AES encryption.
 
-   - Check the existence of "path", "merkleRoot", "TargetHash", and "anchors".
-   - Ensure that "anchors" has a value in the form of an array.
+   - Validate the existence of the "anchors" keyword with valid data.
+   - Ensure that the following key fields exist in your credentials:
+     - "path"
+     - "merkleRoot"
+     - "targetHash"
+     - "anchors"
    - Separate the transaction ID and blink value.
    - Apply chain condition and call the corresponding API:
-     - ethereumMainnet
-     - ethereumRopsten
+     - EthereumMainnet
+     - EthereumRopsten
      - EthereumSepolia
+     - PolygonMainnet
+     - PolygonTestnet
+
    - Handle API responses:
-     - Success: Retrieve the data and get the hash of the credentials from the transaction data (#Hash1).
+     - Success: Retrieve the data and get the hash of the credentials from the transaction data.
      - Error: Return the error from the API or indicate transaction lookup errors or transaction not found errors.
 
 3. **Status Check** :vertical_traffic_light::
@@ -87,4 +100,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.0 of the EveryCRED Verifier JS does not support the Open Badges Standards.
+Version 1.0.1 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
