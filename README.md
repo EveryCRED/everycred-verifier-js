@@ -100,4 +100,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.1 of the EveryCRED Verifier JS does not support the Open Badges Standards.
+Version 1.0.1 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
