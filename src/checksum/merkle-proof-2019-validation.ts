@@ -2,10 +2,25 @@ import { Buffer } from 'buffer';
 import * as CryptoJS from 'crypto-js';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import { ALGORITHM_TYPES, BASE_API, BASE_NETWORK, BLOCKCHAIN_API_LIST, CHECKSUM_MERKLEPROOF_CHECK_KEYS, GENERAL_KEYWORDS, HTTP_METHODS, MERKLE_TREE } from '../constants/common';
+import { MERKLE_TREE_VALIDATION_API_URL } from '../config/config';
+import {
+  ALGORITHM_TYPES,
+  BASE_API,
+  BASE_NETWORK,
+  BLOCKCHAIN_API_LIST,
+  CHECKSUM_MERKLEPROOF_CHECK_KEYS,
+  GENERAL_KEYWORDS,
+  HTTP_METHODS,
+  MERKLE_TREE
+} from '../constants/common';
 import { Messages } from '../constants/messages';
-import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
-import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent, isObjectEmpty } from '../utils/credential-util';
+import {
+  deepCloneData,
+  getDataFromAPI,
+  getDataFromKey,
+  isKeyPresent,
+  isObjectEmpty
+} from '../utils/credential-util';
 import { logger } from '../utils/logger';
 import { sleep } from '../utils/sleep';
 
