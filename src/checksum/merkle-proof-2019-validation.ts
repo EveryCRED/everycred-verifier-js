@@ -2,18 +2,21 @@ import { Buffer } from 'buffer';
 import * as CryptoJS from 'crypto-js';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import { MERKLE_TREE_VALIDATION_API_URL } from '../config/config';
 import {
   ALGORITHM_TYPES,
+  APPLICATION_JSON,
   BASE_API,
   BASE_NETWORK,
   BLOCKCHAIN_API_LIST,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
   GENERAL_KEYWORDS,
   HTTP_METHODS,
-  MERKLE_TREE
+  MERKLE_TREE,
+  REQUEST_BODY
 } from '../constants/common';
 import { Messages } from '../constants/messages';
+import { Stages } from '../constants/stages';
+import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import {
   deepCloneData,
   getDataFromAPI,
@@ -32,7 +35,7 @@ export class MerkleProofValidator2019 {
   private isMerkleProofVerified: boolean = false;
   networkName: string = '';
 
-  constructor(private progressCallback: (step: string, status: boolean) => void) { }
+  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The `validate` function performs various checks and validations on a given credential data and
@@ -44,8 +47,12 @@ export class MerkleProofValidator2019 {
   async validate(credentialData: any): Promise<{ message: string; status: boolean; networkName: string; }> {
     await this.getData(credentialData);
 
+    if (isObjectEmpty(this.decodedData)) {
+      this.progressCallback(Stages.merkleProofValidation2019, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
+      return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, status: false, networkName: '' };
+    }
+
     if (
-      !isObjectEmpty(this.decodedData) &&
       (await this.checkDecodedAnchors()).status &&
       (await this.checkDecodedPath()).status &&
       (await this.checkDecodedMerkleRoot()).status &&
@@ -60,17 +67,17 @@ export class MerkleProofValidator2019 {
       const encodedHash = await this.calculateHash(normalizedData);
 
       if (this.isMerkleProofVerified && encodedHash === this.decodedData.targetHash) {
-        this.progressCallback(Messages.CHECKING_HOLDER, true);
-        return { message: '', status: true, networkName: this.networkName };
+        this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, true, Messages.CALCULATED_HASH_MATCHES_WITH_TARGETHASH);
       } else {
-        this.progressCallback(Messages.CHECKING_HOLDER, false);
-        logger(Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH, "error");
-        logger(Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, "error");
+        this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, false, Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH);
         return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
       }
+
+      this.progressCallback(Stages.merkleProofValidation2019, Messages.MERKLE_PROOF_2019_VALIDATION, true, Messages.MERKLE_PROOF_2019_VALIDATION_SUCCESS);
+      return { message: Messages.MERKLE_PROOF_2019_VALIDATION, status: true, networkName: this.networkName };
     }
 
-    logger(Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, "error");
+    this.progressCallback(Stages.merkleProofValidation2019, Messages.MERKLE_PROOF_2019_VALIDATION, false, Messages.MERKLE_PROOF_2019_VALIDATION_FAILED);
     return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
   }
 
@@ -123,10 +130,26 @@ export class MerkleProofValidator2019 {
     );
 
     if (!proofValue?.length || !AES_128_IV?.length || !AES_128_KEY?.length) {
-      this.failedAllStages();
+      this.progressCallback(Stages.getAESDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_AES_NORMALIZED_DECODED_DATA_ERROR);
       return {};
     }
 
+    this.progressCallback(Stages.getAESDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, true, Messages.FETCHING_AES_NORMALIZED_DECODED_DATA_SUCCESS);
+    return this.AESDecrypt(proofValue, AES_128_KEY, AES_128_IV);
+  }
+
+  /**
+   * The function AESDecrypt takes a proofValue, AES_128_KEY, and AES_128_IV as input and uses AES
+   * encryption to decrypt the proofValue and return the decrypted string.
+   * @param {string} proofValue - The `proofValue` parameter is the encrypted value that you want to
+   * decrypt using AES-128 encryption.
+   * @param {string} AES_128_KEY - The AES_128_KEY parameter is a string that represents the 128-bit
+   * encryption key used for AES decryption.
+   * @param {string} AES_128_IV - The AES_128_IV parameter is the initialization vector used for AES
+   * decryption. It is a string representation of the 128-bit IV value.
+   * @returns a decrypted string.
+   */
+  private AESDecrypt(proofValue: string, AES_128_KEY: string, AES_128_IV: string): string {
     return CryptoJS.AES.decrypt(
       proofValue,
       CryptoJS.enc.Utf8.parse(AES_128_KEY),
@@ -142,13 +165,13 @@ export class MerkleProofValidator2019 {
   private async getNormalizedDecodedData(algorithm: string): Promise<any> {
     const apiUrl = `${MERKLE_TREE_VALIDATION_API_URL}${MERKLE_TREE.validation_api}${MERKLE_TREE.data_type}${MERKLE_TREE.algorithm}${algorithm}`;
     const formData = new FormData();
-    const blob = new Blob([JSON.stringify(this.credential)], { type: 'application/json' });
-    formData.append('body', blob);
+    const blob = new Blob([JSON.stringify(this.credential)], { type: APPLICATION_JSON });
+    formData.append(REQUEST_BODY, blob);
 
     const options = {
       method: HTTP_METHODS.POST,
       headers: {
-        Accept: 'application/json',
+        Accept: APPLICATION_JSON,
       },
       body: formData,
     };
@@ -161,7 +184,7 @@ export class MerkleProofValidator2019 {
         return apiResponse;
       }
     } catch (error) {
-      this.failedAllStages();
+      this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
       return {};
     }
   }
@@ -178,12 +201,12 @@ export class MerkleProofValidator2019 {
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue)
     ) {
-      this.failedAllStages();
-      logger(Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, "error");
+      this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
       return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, status: false };
     }
 
-    return { message: '', status: true };
+    this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, true, Messages.FETCHING_NORMALIZED_DECODED_DATA_SUCCESS);
+    return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_SUCCESS, status: true };
   }
 
   /**
@@ -207,12 +230,12 @@ export class MerkleProofValidator2019 {
       );
 
       if (anchorsData?.length) {
-        this.progressCallback(Messages.FORMAT_VALIDATION, true);
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkDecodedAnchors, Messages.ANCHOR_DECODED_DATA_KEY_VALIDATE, true, Messages.ANCHOR_DECODED_DATA_KEY_SUCCESS);
+        return { message: Messages.ANCHOR_DECODED_DATA_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedAllStages();
+    this.progressCallback(Stages.checkDecodedAnchors, Messages.ANCHOR_DECODED_DATA_KEY_VALIDATE, false, Messages.ANCHOR_DECODED_DATA_KEY_ERROR);
     return { message: Messages.ANCHOR_DECODED_DATA_KEY_ERROR, status: false };
   }
 
@@ -233,11 +256,11 @@ export class MerkleProofValidator2019 {
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.path
       )
     ) {
-      return { message: '', status: true };
+      this.progressCallback(Stages.checkDecodedPath, Messages.PATH_DECODED_DATA_KEY_VALIDATE, true, Messages.PATH_DECODED_DATA_KEY_SUCCESS);
+      return { message: Messages.PATH_DECODED_DATA_KEY_SUCCESS, status: true };
     }
 
-    this.failedThreeStages();
-    logger(Messages.PATH_DECODED_DATA_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkDecodedPath, Messages.PATH_DECODED_DATA_KEY_VALIDATE, false, Messages.PATH_DECODED_DATA_KEY_ERROR);
     return { message: Messages.PATH_DECODED_DATA_KEY_ERROR, status: false };
   }
 
@@ -261,13 +284,12 @@ export class MerkleProofValidator2019 {
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.merkleRoot
       );
       if (merkleRootData?.length && typeof merkleRootData === 'string') {
-        this.progressCallback(Messages.COMPARING_HASHES, true);
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkDecodedMerkleRoot, Messages.MERKLEROOT_DECODED_DATA_KEY_VALIDATE, true, Messages.MERKLEROOT_DECODED_DATA_KEY_SUCCESS);
+        return { message: Messages.MERKLEROOT_DECODED_DATA_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedThreeStages();
-    logger(Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkDecodedMerkleRoot, Messages.MERKLEROOT_DECODED_DATA_KEY_VALIDATE, false, Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR);
     return { message: Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR, status: false };
   }
 
@@ -291,12 +313,12 @@ export class MerkleProofValidator2019 {
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.targetHash
       );
       if (targetHashData?.length && typeof targetHashData === 'string') {
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkDecodedTargetHash, Messages.TARGETHASH_DECODED_DATA_KEY_VALIDATE, true, Messages.TARGETHASH_DECODED_DATA_KEY_SUCCESS);
+        return { message: Messages.TARGETHASH_DECODED_DATA_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedTwoStages();
-    logger(Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkDecodedTargetHash, Messages.TARGETHASH_DECODED_DATA_KEY_VALIDATE, false, Messages.TARGETHASH_DECODED_DATA_KEY_ERROR);
     return { message: Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, status: false };
   }
 
@@ -310,9 +332,7 @@ export class MerkleProofValidator2019 {
     // Fetching the selected anchor from decodedData
     const anchorParts = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':') || [];
     if (!anchorParts?.length) {
-      // Logging an error when anchorParts retrieval fails
-      this.failedTwoStages();
-      logger(Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR);
       return { message: Messages.SELECTED_ANCHOR_RETRIEVAL_ERROR, status: false };
     }
 
@@ -324,9 +344,7 @@ export class MerkleProofValidator2019 {
     ];
 
     if (!blinkValue || !networkType || !transactionID) {
-      // Logging an error when required values retrieval fails
-      this.failedTwoStages();
-      logger(Messages.REQUIRED_VALUES_RETRIEVAL_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.REQUIRED_VALUES_RETRIEVAL_ERROR);
       return { message: Messages.REQUIRED_VALUES_RETRIEVAL_ERROR, status: false };
     }
 
@@ -335,9 +353,7 @@ export class MerkleProofValidator2019 {
     const baseNetworkValue = getDataFromKey(BASE_NETWORK, networkType);
 
     if (!baseAPIValue || !baseNetworkValue) {
-      // Logging an error when baseAPIValue or baseNetworkValue retrieval fails
-      this.failedTwoStages();
-      logger(Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR);
       return { message: Messages.BASE_API_OR_NETWORK_RETRIEVAL_ERROR, status: false };
     }
 
@@ -347,9 +363,7 @@ export class MerkleProofValidator2019 {
     const matchedAPI = BLOCKCHAIN_API_LIST.find(api => api.id === this.networkName);
 
     if (!matchedAPI) {
-      // Logging an error when no matching API is found
-      this.failedTwoStages();
-      logger(Messages.NO_MATCHING_API_FOUND_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.NO_MATCHING_API_FOUND_ERROR);
       return { message: Messages.NO_MATCHING_API_FOUND_ERROR, status: false };
     }
 
@@ -358,9 +372,7 @@ export class MerkleProofValidator2019 {
     const apiKey = getDataFromKey(matchedAPI, GENERAL_KEYWORDS.apiKey);
 
     if (!url || !apiKey) {
-      // Logging an error when URL or apiKey retrieval fails
-      this.failedTwoStages();
-      logger(Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.URL_OR_APIKEY_RETRIEVAL_ERROR);
       return { message: Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, status: false };
     }
 
@@ -371,20 +383,16 @@ export class MerkleProofValidator2019 {
       // Fetching data from the API using finalUrl
       this.blockchainApiResponse = await getDataFromAPI(finalUrl);
     } catch (error) {
-      // Logging an error when the transaction is not found
-      this.failedTwoStages();
-      logger(Messages.TRANSACTION_NOT_FOUND_ERROR, "error");
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.TRANSACTION_NOT_FOUND_ERROR);
       return { message: Messages.TRANSACTION_NOT_FOUND_ERROR, status: false };
     }
 
     if (!isEmpty(this.blockchainApiResponse)) {
-      this.progressCallback(Messages.COMPARING_MERKLE_ROOT, true);
-      return { message: '', status: true };
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, true, Messages.DATA_FETCHED_SUCCESS);
+      return { message: Messages.DATA_FETCHED_SUCCESS, status: true };
     }
 
-    // Logging an error when data fetch fails
-    this.failedTwoStages();
-    logger(Messages.DATA_FETCHED_ERROR, "error");
+    this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.DATA_FETCHED_ERROR);
     return { message: Messages.DATA_FETCHED_ERROR, status: false };
   }
 
@@ -414,11 +422,8 @@ export class MerkleProofValidator2019 {
 
     if (!targetHash?.length || !merkleRoot?.length) {
       this.isMerkleProofVerified = false;
-      this.progressCallback(Messages.CHECKING_HOLDER, false);
-      return {
-        message: Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR,
-        status: this.isMerkleProofVerified
-      };
+      this.progressCallback(Stages.verifyMerkleProof, Messages.MERKLE_PROOF_VALIDATE, false, Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR);
+      return { message: Messages.MERKLEROOT_DECODED_DATA_KEY_ERROR, status: this.isMerkleProofVerified };
     }
 
     let currentHash = targetHash;
@@ -438,10 +443,18 @@ export class MerkleProofValidator2019 {
     this.isMerkleProofVerified = currentHash === merkleRoot;
 
     if (!this.isMerkleProofVerified) {
-      this.progressCallback(Messages.CHECKING_HOLDER, false);
+      this.progressCallback(Stages.verifyMerkleProof, Messages.MERKLE_PROOF_VALIDATE, false, Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT);
       logger(Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT, "error");
     }
 
+    this.progressCallback(
+      Stages.verifyMerkleProof,
+      Messages.MERKLE_PROOF_VALIDATE,
+      this.isMerkleProofVerified,
+      this.isMerkleProofVerified
+        ? Messages.CALCULATED_HASH_MATCHES_WITH_MERKLEROOT
+        : Messages.CALCULATED_HASH_DIFFER_FROM_MERKLEROOT
+    );
     return {
       message: this.isMerkleProofVerified
         ? Messages.CALCULATED_HASH_MATCHES_WITH_MERKLEROOT
@@ -477,26 +490,6 @@ export class MerkleProofValidator2019 {
    */
   private async calculateHash(data: any) {
     return sha256(data);
-  }
-
-  /**
-   * The below code is defining a series of private methods in a TypeScript class.
-   * Each method calls a `progressCallback` function with a specific message and a `false` value.
-   * The `progressCallback` function is likely used to update the progress of some operation or task. The methods are called in a cascading manner, with each method calling the next one in the sequence.
-  */
-  private failedAllStages() {
-    this.progressCallback(Messages.FORMAT_VALIDATION, false);
-    this.failedThreeStages();
-  }
-
-  private failedThreeStages() {
-    this.progressCallback(Messages.COMPARING_HASHES, false);
-    this.failedTwoStages();
-  }
-
-  private failedTwoStages() {
-    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
-    this.progressCallback(Messages.CHECKING_HOLDER, false);
   }
 
 }

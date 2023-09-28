@@ -5,13 +5,13 @@ import {
   REVOCATION_STATUS_CHECK_KEYS,
 } from "../constants/common";
 import { Messages } from "../constants/messages";
+import { Stages } from '../constants/stages';
 import {
   deepCloneData,
   getDataFromKey,
   isDateExpired,
   isKeyPresent
 } from "../utils/credential-util";
-import { logger } from "../utils/logger";
 import { sleep } from '../utils/sleep';
 
 export class RevocationStatusCheck {
@@ -19,7 +19,7 @@ export class RevocationStatusCheck {
   private issuerProfileData: any;
   private revocationListData: any;
 
-  constructor(private progressCallback: (step: string, status: boolean) => void) { }
+  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function `validate` takes in three parameters, performs some data cloning operations, and then
@@ -49,7 +49,12 @@ export class RevocationStatusCheck {
 
     const result = await this.statusRevocationCheck();
 
-    return { message: result ? '' : Messages.REVOCATION_STATUS_CHECK_FAILED, status: result, };
+    const reason = result
+      ? Messages.REVOCATION_STATUS_CHECK_SUCCESS
+      : Messages.REVOCATION_STATUS_CHECK_FAILED;
+
+    this.progressCallback(Stages.revocationStatusCheck, Messages.REVOCATION_STATUS_VALIDATION, result, reason);
+    return { message: reason, status: result };
   }
 
   /**
@@ -84,11 +89,11 @@ export class RevocationStatusCheck {
         this.revocationListData[REVOCATION_STATUS_CHECK_KEYS.context].includes(data)
       )
     ) {
-      return { message: '', status: true };
+      this.progressCallback(Stages.checkRevocationContext, Messages.CONTEXT_REVOCATION_LIST_KEY_VALIDATE, true, Messages.CONTEXT_REVOCATION_LIST_KEY_SUCCESS);
+      return { message: Messages.CONTEXT_REVOCATION_LIST_KEY_SUCCESS, status: true };
     }
 
-    this.failedAllStages();
-    logger(Messages.CONTEXT_REVOCATION_LIST_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkRevocationContext, Messages.CONTEXT_REVOCATION_LIST_KEY_VALIDATE, false, Messages.CONTEXT_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.CONTEXT_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
@@ -106,13 +111,12 @@ export class RevocationStatusCheck {
       );
 
       if (typeData.includes(CREDENTIALS_CONSTANTS.revocation_list_type_supported)) {
-        this.progressCallback(Messages.CHECKING_REVOKE_STATUS, true);
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkRevocationType, Messages.TYPE_REVOCATION_LIST_KEY_VALIDATE, true, Messages.TYPE_REVOCATION_LIST_KEY_SUCCESS);
+        return { message: Messages.TYPE_REVOCATION_LIST_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.TYPE_REVOCATION_LIST_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkRevocationType, Messages.TYPE_REVOCATION_LIST_KEY_VALIDATE, false, Messages.TYPE_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.TYPE_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
@@ -135,12 +139,12 @@ export class RevocationStatusCheck {
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
         )
       ) {
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkRevocationID, Messages.ID_REVOCATION_LIST_KEY_VALIDATE, true, Messages.ID_REVOCATION_LIST_KEY_SUCCESS);
+        return { message: Messages.ID_REVOCATION_LIST_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.ID_REVOCATION_LIST_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkRevocationID, Messages.ID_REVOCATION_LIST_KEY_VALIDATE, false, Messages.ID_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.ID_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
@@ -164,13 +168,12 @@ export class RevocationStatusCheck {
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.id
         )
       ) {
-        this.progressCallback(Messages.CHECKING_AUTHENTICITY, true);
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkRevocationIssuer, Messages.ISSUER_REVOCATION_LIST_KEY_VALIDATE, true, Messages.ISSUER_REVOCATION_LIST_KEY_SUCCESS);
+        return { message: Messages.ISSUER_REVOCATION_LIST_KEY_SUCCESS, status: true };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.ISSUER_REVOCATION_LIST_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkRevocationIssuer, Messages.ISSUER_REVOCATION_LIST_KEY_VALIDATE, false, Messages.ISSUER_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.ISSUER_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
@@ -197,16 +200,16 @@ export class RevocationStatusCheck {
         );
 
         if (revokedData.length) {
-          this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+          this.progressCallback(Stages.checkRevocationRevokedAssertions, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE, false, getDataFromKey(revokedData[0], ['0', 'revocationReason']));
           return { message: getDataFromKey(revokedData[0], ['0', 'revocationReason']), status: false };
         }
 
-        return { message: '', status: true };
+        this.progressCallback(Stages.checkRevocationRevokedAssertions, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE, true, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_SUCCESS);
+        return { message: Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_SUCCESS, status: true };
       }
     }
 
-    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
-    logger(Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, "error");
+    this.progressCallback(Stages.checkRevocationRevokedAssertions, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE, false, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, status: false };
   }
 
@@ -229,26 +232,17 @@ export class RevocationStatusCheck {
         CREDENTIALS_VALIDATORS_KEYS.validUntilDate
       );
 
-      if (validUntilDate && !isDateExpired(validUntilDate)) {
-        this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, true);
-        return { message: '', status: true };
+      if (validUntilDate?.length && !isDateExpired(validUntilDate)) {
+        this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, true, Messages.VALID_UNTIL_DATE_KEY_SUCCESS);
+        return { message: Messages.VALID_UNTIL_DATE_KEY_SUCCESS, status: true };
       }
 
-      this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+      this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, false, Messages.VALID_UNTIL_DATE_KEY_ERROR);
       return { message: Messages.VALID_UNTIL_DATE_KEY_ERROR, status: false };
     }
 
-    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, true);
-    return { message: '', status: true };
-  }
-
-  /**
-   * The function "failedAllStages" updates the progress callback with two messages indicating the
-   * checking of authenticity and expiration date, both with a false status.
-   */
-  private failedAllStages(): void {
-    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
-    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
+    this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, true, Messages.VALID_UNTIL_DATE_KEY_SUCCESS);
+    return { message: Messages.VALID_UNTIL_DATE_KEY_SUCCESS, status: true };
   }
 
 }
