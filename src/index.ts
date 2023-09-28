@@ -1,7 +1,7 @@
-import { get } from "lodash";
 import { MerkleProofValidator2019 } from './checksum/merkle-proof-2019-validation';
 import { Messages } from './constants/messages';
-import { deepCloneData } from "./utils/credential-util";
+import { Stages } from './constants/stages';
+import { deepCloneData, getDataFromKey } from "./utils/credential-util";
 import { sleep } from './utils/sleep';
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
 import { CredentialValidator } from "./validator/credential-validator";
@@ -17,7 +17,7 @@ export class EveryCredVerifier {
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
 
-  constructor(private progressCallback: (step: string, status: boolean) => void) { }
+  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function verifies a certificate by performing credential validation, checksum validation, and
@@ -41,26 +41,17 @@ export class EveryCredVerifier {
         this.revocationStatusValidation = await this.revocationStatusCheck();
 
         if (this.revocationStatusValidation) {
-          this.progressCallback(Messages.VERIFIED, true);
-          this.certificate = {};
-          this.issuerProfileData = {};
-          this.revocationListData = {};
-          return { message: Messages.VERIFIED, status: true, networkName: this.networkName };
+          return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
         }
       }
     }
 
-    this.certificate = {};
-    this.issuerProfileData = {};
-    this.revocationListData = {};
-    this.progressCallback(Messages.FAILED, false);
-    return { message: Messages.FAILED, status: false, networkName: '' };
+    return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
   };
 
   /**
-   * The function `validateCredentials` is an asynchronous function that validates credentials by using
-   * a credential validator and a credential issuer validator, and returns a boolean indicating whether
-   * the validation was successful.
+   * The function `validateCredentials` is an asynchronous function that validates credentials and
+   * returns a boolean indicating whether the validation was successful or not.
    * @returns a Promise<boolean>.
    */
   private async validateCredentials(): Promise<boolean> {
@@ -72,18 +63,17 @@ export class EveryCredVerifier {
     if (result.status) {
       let data = await new CredentialIssuerValidator(this.progressCallback).validate(this.certificate);
 
-      this.credentialIssuerValidation = get(data, "issuerProfileValidationStatus");
-      this.issuerProfileData = get(data, "issuerProfileData");
-      this.revocationListData = get(data, "revocationListData");
+      this.credentialIssuerValidation = getDataFromKey(data, "issuerProfileValidationStatus");
+      this.issuerProfileData = getDataFromKey(data, "issuerProfileData");
+      this.revocationListData = getDataFromKey(data, "revocationListData");
     }
 
     if (result.status && this.credentialIssuerValidation) {
-      this.progressCallback(Messages.AUTHENTICITY_VALIDATION, true);
+      this.progressCallback(Stages.validateCredentials, Messages.CREDENTIALS_VALIDATION, true, Messages.CREDENTIALS_VALIDATION_SUCCESS);
       return true;
     }
 
-    this.failedTwoStages();
-    this.progressCallback(Messages.AUTHENTICITY_VALIDATION, false);
+    this.progressCallback(Stages.validateCredentials, Messages.CREDENTIALS_VALIDATION, false, Messages.CREDENTIALS_VALIDATION_FAILED);
     return false;
   }
 
@@ -97,13 +87,7 @@ export class EveryCredVerifier {
 
     const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate);
     this.isChecksumValidated = validate?.status;
-    this.networkName = validate.networkName;
-
-    this.progressCallback(Messages.HASH_COMPARISON, this.isChecksumValidated);
-
-    if (!this.isChecksumValidated) {
-      this.failedLastStage();
-    }
+    this.networkName = validate.networkName ?? '';
 
     return this.isChecksumValidated;
   }
@@ -122,35 +106,7 @@ export class EveryCredVerifier {
       this.issuerProfileData
     )).status;
 
-    this.progressCallback(Messages.STATUS_CHECK, this.revocationStatusValidation);
     return this.revocationStatusValidation;
-  }
-
-  /**
-   * The function "failedTwoStages" updates the progress callback for several messages and then calls
-   * another function.
-   */
-  private failedTwoStages() {
-    this.progressCallback(Messages.HASH_COMPARISON, false);
-
-    this.progressCallback(Messages.FORMAT_VALIDATION, false);
-    this.progressCallback(Messages.COMPARING_HASHES, false);
-    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
-    this.progressCallback(Messages.CHECKING_HOLDER, false);
-
-    this.failedLastStage();
-  }
-
-  /**
-   * The function "failedLastStage" updates the progress status by calling the "progressCallback"
-   * function with different messages.
-   */
-  private failedLastStage() {
-    this.progressCallback(Messages.STATUS_CHECK, false);
-
-    this.progressCallback(Messages.CHECKING_REVOKE_STATUS, false);
-    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
-    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
   }
 
 }

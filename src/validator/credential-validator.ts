@@ -9,15 +9,12 @@ import {
   CREDENTIALS_VALIDATORS_KEYS,
 } from "../constants/common";
 import { Messages } from '../constants/messages';
-import { logger } from '../utils/logger';
+import { Stages } from '../constants/stages';
 
 export class CredentialValidator {
   private credential: any;
-  private progressCallback: (step: string, status: boolean) => void;
 
-  constructor(progressCallback: (step: string, status: boolean) => void) {
-    this.progressCallback = progressCallback;
-  }
+  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function `validate` is an asynchronous function that validates a credential object and returns
@@ -31,18 +28,19 @@ export class CredentialValidator {
     this.credential = deepCloneData(credentialData);
 
     if (
-      await this.validateCredentialType() &&
-      await this.validateCredentialContext() &&
-      await this.validateCredentialID() &&
-      await this.validateCredentialCredentialSubject() &&
-      await this.validateCredentialProof() &&
-      await this.validateCredentialIssuanceDate()
+      (await this.validateCredentialType()).status &&
+      (await this.validateCredentialContext()).status &&
+      (await this.validateCredentialID()).status &&
+      (await this.validateCredentialSubject()).status &&
+      (await this.validateCredentialProof()).status &&
+      (await this.validateCredentialIssuanceDate()).status
     ) {
-      return { message: '', status: true };
+      this.progressCallback(Stages.validateCredential, Messages.CREDENTIAL_VALIDATION, true, Messages.CREDENTIAL_VALIDATION_SUCCESS);
+      return { message: Messages.CREDENTIAL_VALIDATION_SUCCESS, status: true };
     }
 
-    this.failedAllStages();
-    return { message: Messages.CREDENTIALS_VALIDATION_FAILED, status: false };
+    this.progressCallback(Stages.validateCredential, Messages.CREDENTIAL_VALIDATION, false, Messages.CREDENTIAL_VALIDATION_FAILED);
+    return { message: Messages.CREDENTIAL_VALIDATION_FAILED, status: false };
   }
 
   /**
@@ -50,20 +48,20 @@ export class CredentialValidator {
    * `credential` object and returns a boolean value indicating whether it is valid or not.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialType(): Promise<boolean> {
+  private async validateCredentialType(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.type)) {
       let typeData: string[] = getDataFromKey(
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.type
       );
       if (typeData.includes(CREDENTIALS_CONSTANTS.verifiable_credential)) {
-        return true;
+        this.progressCallback(Stages.validateCredentialType, Messages.TYPE_KEY_VALIDATE, true, Messages.TYPE_KEY_SUCCESS);
+        return { step: Stages.validateCredentialType, title: Messages.TYPE_KEY_VALIDATE, status: true, reason: Messages.TYPE_KEY_SUCCESS };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.TYPE_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialType, Messages.TYPE_KEY_VALIDATE, false, Messages.TYPE_KEY_ERROR);
+    return { step: Stages.validateCredentialType, title: Messages.TYPE_KEY_VALIDATE, status: false, reason: Messages.TYPE_KEY_ERROR };
   }
 
   /**
@@ -72,7 +70,7 @@ export class CredentialValidator {
    * otherwise.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialContext(): Promise<boolean> {
+  private async validateCredentialContext(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.context)) {
       let contextData: string[] = getDataFromKey(
         this.credential,
@@ -81,13 +79,13 @@ export class CredentialValidator {
       if (
         CREDENTIALS_CONSTANTS.context_values.some((data) => contextData.includes(data))
       ) {
-        return true;
+        this.progressCallback(Stages.validateCredentialContext, Messages.CONTEXT_KEY_VALIDATE, true, Messages.CONTEXT_KEY_SUCCESS);
+        return { step: Stages.validateCredentialContext, title: Messages.CONTEXT_KEY_VALIDATE, status: true, reason: Messages.CONTEXT_KEY_SUCCESS };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.CONTEXT_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialContext, Messages.CONTEXT_KEY_VALIDATE, false, Messages.CONTEXT_KEY_ERROR);
+    return { step: Stages.validateCredentialContext, title: Messages.CONTEXT_KEY_VALIDATE, status: false, reason: Messages.CONTEXT_KEY_ERROR };
   }
 
   /**
@@ -95,24 +93,24 @@ export class CredentialValidator {
    * returns true if it is, otherwise it logs an error message and returns false.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialID(): Promise<boolean> {
+  private async validateCredentialID(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
       if (getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
-        return true;
+        this.progressCallback(Stages.validateCredentialID, Messages.ID_KEY_VALIDATE, true, Messages.ID_KEY_SUCCESS);
+        return { step: Stages.validateCredentialID, title: Messages.ID_KEY_VALIDATE, status: true, reason: Messages.ID_KEY_SUCCESS };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.ID_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialID, Messages.ID_KEY_VALIDATE, false, Messages.ID_KEY_ERROR);
+    return { step: Stages.validateCredentialID, title: Messages.ID_KEY_VALIDATE, status: false, reason: Messages.ID_KEY_ERROR };
   }
 
   /**
-   * The function `validateCredentialCredentialSubject` checks if the required keys are present in the
+   * The function `validateCredentialSubject` checks if the required keys are present in the
    * `credentialSubject` object and returns true if they are, otherwise it returns false.
    * @returns a Promise<boolean>.
    */
-  private async validateCredentialCredentialSubject(): Promise<boolean> {
+  private async validateCredentialSubject(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (
       isKeyPresent(
         this.credential,
@@ -140,14 +138,14 @@ export class CredentialValidator {
         }
 
         if (!flag) {
-          return true;
+          this.progressCallback(Stages.validateCredentialSubject, Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, true, Messages.CREDENTIAL_SUBJECT_KEY_SUCCESS);
+          return { step: Stages.validateCredentialSubject, title: Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, status: true, reason: Messages.CREDENTIAL_SUBJECT_KEY_SUCCESS };
         }
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.CREDENTIAL_SUBJECT_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialSubject, Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, false, Messages.CREDENTIAL_SUBJECT_KEY_ERROR);
+    return { step: Stages.validateCredentialSubject, title: Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, status: false, reason: Messages.CREDENTIAL_SUBJECT_KEY_ERROR };
   }
 
   /**
@@ -155,7 +153,7 @@ export class CredentialValidator {
    * validates its data.
    * @returns a Promise<boolean>.
    */
-  private async validateCredentialProof(): Promise<boolean> {
+  private async validateCredentialProof(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
       let proofData = getDataFromKey(
         this.credential,
@@ -183,14 +181,14 @@ export class CredentialValidator {
             (data) => proofData.type === data
           )
         ) {
-          return true;
+          this.progressCallback(Stages.validateCredentialProof, Messages.PROOF_KEY_VALIDATE, true, Messages.PROOF_KEY_SUCCESS);
+          return { step: Stages.validateCredentialProof, title: Messages.PROOF_KEY_VALIDATE, status: true, reason: Messages.PROOF_KEY_SUCCESS };
         }
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.PROOF_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialProof, Messages.PROOF_KEY_VALIDATE, false, Messages.PROOF_KEY_ERROR);
+    return { step: Stages.validateCredentialProof, title: Messages.PROOF_KEY_VALIDATE, status: false, reason: Messages.PROOF_KEY_ERROR };
   }
 
   /**
@@ -198,7 +196,7 @@ export class CredentialValidator {
    * otherwise it returns false and logs an error message.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialIssuanceDate(): Promise<boolean> {
+  private async validateCredentialIssuanceDate(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
     if (
       isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.issuanceDate)
     ) {
@@ -207,30 +205,13 @@ export class CredentialValidator {
         CREDENTIALS_VALIDATORS_KEYS.issuanceDate
       );
       if (issuanceDateData) {
-        return true;
+        this.progressCallback(Stages.validateCredentialIssuanceDate, Messages.ISSUANCE_DATE_KEY_VALIDATE, true, Messages.ISSUANCE_DATE_KEY_SUCCESS);
+        return { step: Stages.validateCredentialIssuanceDate, title: Messages.ISSUANCE_DATE_KEY_VALIDATE, status: true, reason: Messages.ISSUANCE_DATE_KEY_SUCCESS };
       }
     }
 
-    this.failedAllStages();
-    logger(Messages.ISSUANCE_DATE_KEY_ERROR, "error");
-    return false;
+    this.progressCallback(Stages.validateCredentialIssuanceDate, Messages.ISSUANCE_DATE_KEY_VALIDATE, false, Messages.ISSUANCE_DATE_KEY_ERROR);
+    return { step: Stages.validateCredentialIssuanceDate, title: Messages.ISSUANCE_DATE_KEY_VALIDATE, status: false, reason: Messages.ISSUANCE_DATE_KEY_ERROR };
   }
 
-  /**
-   * The function "failedAllStages" updates the progress status of various stages in a validation
-   * process to indicate failure.
-   */
-  private failedAllStages() {
-    this.progressCallback(Messages.CHECKING_VALIDATION, false);
-    this.progressCallback(Messages.VERIFY_AUTHENTICITY, false);
-
-    this.progressCallback(Messages.FORMAT_VALIDATION, false);
-    this.progressCallback(Messages.COMPARING_HASHES, false);
-    this.progressCallback(Messages.COMPARING_MERKLE_ROOT, false);
-    this.progressCallback(Messages.CHECKING_HOLDER, false);
-
-    this.progressCallback(Messages.CHECKING_REVOKE_STATUS, false);
-    this.progressCallback(Messages.CHECKING_AUTHENTICITY, false);
-    this.progressCallback(Messages.CHECKING_EXPIRATION_DATE, false);
-  }
 }

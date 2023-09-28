@@ -90,3 +90,18 @@ export function isDateExpired(dateString: string): boolean {
 export function isObjectEmpty(data: any): boolean {
   return isEmpty(data);
 }
+
+/**
+ * The function `isValidURL` checks if a given string is a valid URL.
+ * @param {string} url - The `url` parameter is a string that represents a URL.
+ * @returns The function `isValidURL` returns a boolean value. It returns `true` if the input `url` is
+ * a valid URL, and `false` if it is not a valid URL.
+ */
+export function isValidURL(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
