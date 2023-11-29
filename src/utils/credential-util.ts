@@ -62,7 +62,6 @@ export async function getDataFromAPI(url: string, options?: any): Promise<any> {
     const response = isEmpty(options) ? await fetch(url) : await fetch(url, options);
     return await response.json();
   } catch (err) {
-    console.log("response >> ", err);
     logger(err, "error");
     throw err;
   }
@@ -104,4 +103,11 @@ export function isValidURL(url: string): boolean {
   } catch (error) {
     return false;
   }
+}
+
+export function isFutureDate(dateString: string): boolean {
+  const currentDate = new Date();
+  const dateToCheck = new Date(dateString);
+
+  return currentDate < dateToCheck;
 }

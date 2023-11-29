@@ -44,7 +44,8 @@ export enum CREDENTIALS_VALIDATORS_KEYS {
   credentialSubject = "credentialSubject",
   proof = "proof",
   issuanceDate = "issuanceDate",
-  validUntilDate = "validUntil"
+  validUntilDate = "validUntil",
+  validFromDate = "validFrom"
 }
 
 /* Defining an enum called `CREDENTIALS_ISSUER_VALIDATORS_KEYS` which contains keys used for validating
