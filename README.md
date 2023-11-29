@@ -11,7 +11,7 @@ EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credenti
 You can install the library using npm:
 
 ```shell
-npm install everycred-verifier-js
+npm i @viitorcloudtechnologies/everycred-verifier-js
 ```
 
 ## Verifier Steps :clipboard:
