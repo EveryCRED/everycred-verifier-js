@@ -35,4 +35,5 @@ export enum Stages {
   checkRevocationIssuer = 'checkRevocationIssuer',
   checkRevocationRevokedAssertions = 'checkRevocationRevokedAssertions',
   checkValidUntilDate = 'checkValidUntilDate',
+  checkValidFromDate = 'checkValidFromDate',
 }

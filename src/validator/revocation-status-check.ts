@@ -10,6 +10,7 @@ import {
   deepCloneData,
   getDataFromKey,
   isDateExpired,
+  isFutureDate,
   isKeyPresent
 } from "../utils/credential-util";
 import { sleep } from '../utils/sleep';
@@ -63,12 +64,13 @@ export class RevocationStatusCheck {
    * @returns a Promise that resolves to a boolean value.
    */
   private async statusRevocationCheck(): Promise<boolean> {
-    return (await this.checkRevocationContext()).status &&
+    return ((await this.checkRevocationContext()).status &&
       this.checkRevocationType().status &&
       this.checkRevocationID().status &&
       (await this.checkRevocationIssuer()).status &&
       this.checkRevocationRevokedAssertions().status &&
-      (await this.checkValidUntilDate()).status;
+      (await this.checkValidFromDate()).status &&
+      (await this.checkValidUntilDate()).status);
   }
 
   /**
@@ -211,6 +213,38 @@ export class RevocationStatusCheck {
 
     this.progressCallback(Stages.checkRevocationRevokedAssertions, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_VALIDATE, false, Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR);
     return { message: Messages.REVOKED_ASSERTIONS_REVOCATION_LIST_KEY_ERROR, status: false };
+  }
+
+  /**
+   * The function checks if a valid from date is present in a credential object and returns a message
+   * and status indicating if the validation was successful.
+   * @returns a Promise that resolves to an object with two properties: "message" and "status".
+   */
+  private async checkValidFromDate(): Promise<{ message: string; status: boolean; }> {
+    await sleep(400);
+
+    if (
+      isKeyPresent(
+        this.credential,
+        CREDENTIALS_VALIDATORS_KEYS.validFromDate
+      )
+    ) {
+      let validFromDate = getDataFromKey(
+        this.credential,
+        CREDENTIALS_VALIDATORS_KEYS.validFromDate
+      );
+
+      if (validFromDate?.length && !isFutureDate(validFromDate)) {
+        this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, true, Messages.VALID_FROM_DATE_KEY_SUCCESS);
+        return { message: Messages.VALID_FROM_DATE_KEY_SUCCESS, status: true };
+      }
+
+      this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, false, Messages.VALID_FROM_DATE_KEY_ERROR);
+      return { message: Messages.VALID_FROM_DATE_KEY_ERROR, status: false };
+    }
+
+    this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, true, Messages.VALID_FROM_DATE_KEY_SUCCESS);
+    return { message: Messages.VALID_FROM_DATE_KEY_SUCCESS, status: true };
   }
 
   /**
