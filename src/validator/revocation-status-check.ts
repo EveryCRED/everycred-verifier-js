@@ -8,7 +8,6 @@ import { Messages } from "../constants/messages";
 import { Stages } from '../constants/stages';
 import {
   deepCloneData,
-  formatCustomDate,
   getDataFromKey,
   isDateExpired,
   isFutureDate,
@@ -240,10 +239,8 @@ export class RevocationStatusCheck {
         return { message: Messages.VALID_FROM_DATE_KEY_SUCCESS, status: true };
       }
 
-      const formattedDate = formatCustomDate(new Date(validFromDate));
-
-      this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, false, `${Messages.VALID_FROM_DATE_KEY_ERROR} ${formattedDate}`);
-      return { message: `${Messages.VALID_FROM_DATE_KEY_ERROR} ${formattedDate}`, status: false };
+      this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, false, Messages.VALID_FROM_DATE_KEY_ERROR);
+      return { message: Messages.VALID_FROM_DATE_KEY_ERROR, status: false };
     }
 
     this.progressCallback(Stages.checkValidFromDate, Messages.VALID_FROM_DATE_KEY_VALIDATE, true, Messages.VALID_FROM_DATE_KEY_SUCCESS);
@@ -274,10 +271,8 @@ export class RevocationStatusCheck {
         return { message: Messages.VALID_UNTIL_DATE_KEY_SUCCESS, status: true };
       }
 
-      const formattedDate = formatCustomDate(new Date(validUntilDate));
-
-      this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, false, `${Messages.VALID_UNTIL_DATE_KEY_ERROR} ${formattedDate}`);
-      return { message: `${Messages.VALID_UNTIL_DATE_KEY_ERROR} ${formattedDate}`, status: false };
+      this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, false, Messages.VALID_UNTIL_DATE_KEY_ERROR);
+      return { message: Messages.VALID_UNTIL_DATE_KEY_ERROR, status: false };
     }
 
     this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, true, Messages.VALID_UNTIL_DATE_KEY_SUCCESS);
