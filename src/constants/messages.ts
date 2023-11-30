@@ -101,11 +101,11 @@ export enum Messages {
 
   VALID_UNTIL_DATE_KEY_VALIDATE = "Validate Credential validUntil",
   VALID_UNTIL_DATE_KEY_SUCCESS = "validUntil key is present in the credential with valid data.",
-  VALID_UNTIL_DATE_KEY_ERROR = "The credential expired on",
+  VALID_UNTIL_DATE_KEY_ERROR = "credential is expired.",
 
   VALID_FROM_DATE_KEY_VALIDATE = "Validate Credential validFrom",
   VALID_FROM_DATE_KEY_SUCCESS = "validFrom key is present in the credential with valid data.",
-  VALID_FROM_DATE_KEY_ERROR = "This credential is currently inactive and will be valid from",
+  VALID_FROM_DATE_KEY_ERROR = "credential is not yet validated.",
 
   REVOCATION_STATUS_CHECK_SUCCESS = "Credential is valid and not revoked.",
   REVOCATION_STATUS_CHECK_FAILED = "Revocation status check failed",
