@@ -157,25 +157,5 @@ export enum ALGORITHM_TYPES {
   AES = 'AES-128'
 }
 
-/* The line `const APPLICATION_JSON = 'application/json';` is defining a constant variable called
-`APPLICATION_JSON` and assigning it the value `'application/json'`. */
 export const APPLICATION_JSON = 'application/json';
-
-/* The line `const REQUEST_BODY = 'body';` is defining a constant variable called `REQUEST_BODY` and
-assigning it the value `'body'`. This constant is likely used to represent the request body in a
-code implementation. It can be used as a reference or a parameter in functions or methods that
-handle HTTP requests, indicating that the value being passed or accessed is the request body. */
 export const REQUEST_BODY = 'body';
-
-/* The line `export const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { year: 'numeric',
-month: 'long', day: 'numeric' };` is defining a constant variable called `DATE_TIME_FORMAT_OPTIONS`
-and assigning it an object of type `Intl.DateTimeFormatOptions`. */
-export const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
-};
-
-/* The line `export const DATE_TIME_FORMAT_LOCALE = 'en-US';` is defining a constant variable called
-`DATE_TIME_FORMAT_LOCALE` and assigning it the value `'en-US'`. */
-export const DATE_TIME_FORMAT_LOCALE = 'en-US';
