@@ -171,9 +171,12 @@ export const REQUEST_BODY = 'body';
 month: 'long', day: 'numeric' };` is defining a constant variable called `DATE_TIME_FORMAT_OPTIONS`
 and assigning it an object of type `Intl.DateTimeFormatOptions`. */
 export const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
-  year: 'numeric',
+  day: '2-digit',
   month: 'long',
-  day: 'numeric'
+  year: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  hour12: true,
 };
 
 /* The line `export const DATE_TIME_FORMAT_LOCALE = 'en-US';` is defining a constant variable called
