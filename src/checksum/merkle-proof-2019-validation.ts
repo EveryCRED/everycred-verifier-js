@@ -488,7 +488,7 @@ export class MerkleProofValidator2019 {
    * @returns The calculateHash function is returning the result of the sha256 function, which is the
    * hash value of the input data.
    */
-  private async calculateHash(data: any) {
+  private async calculateHash(data: any): Promise<string> {
     return sha256(data);
   }
 

@@ -5,12 +5,17 @@ context values for the issuer profile, the supported issuer profile type, and th
 key fields for the issuer profile. This object can be exported and used in other parts of the code
 to ensure consistency in the values used for verifiable credentials. */
 export const CREDENTIALS_CONSTANTS = {
-  verifiable_credential: "VerifiableCredential",
+  verifiable_credential: [
+    "VerifiableCredential",
+    "EveryCREDCredential"
+  ],
   context_values: [
     "https://www.w3.org/2018/credentials/v1",
     "https://www.w3.org/2018/credentials/v2",
+    "https://w3id.org/blockcerts/schema/3.0/context.json",
+    "https://w3id.org/everycred/v1"
   ],
-  credentialSubjectRequiredKeys: ["id", "name", "image"],
+  credentialSubjectRequiredKeys: ["id", "profile"],
   proofRequiredKeys: [
     "type",
     "created",
@@ -61,6 +66,7 @@ export enum CREDENTIALS_ISSUER_VALIDATORS_KEYS {
   email = "email",
   revocationList = "revocationList",
   publicKey = "publicKey",
+  profile = "profile",
 }
 
 /* Defining an enum called `STATUS_REVOCATION_CHECK` which contains keys used for checking the status

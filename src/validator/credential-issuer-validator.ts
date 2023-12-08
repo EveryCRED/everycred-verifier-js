@@ -59,7 +59,7 @@ export class CredentialIssuerValidator {
       return { status: false, message: Messages.ISSUER_KEY_ERROR };
     }
 
-    const issuerData = getDataFromKey(this.credential, CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer);
+    const issuerData = getDataFromKey(this.credential.issuer, CREDENTIALS_ISSUER_VALIDATORS_KEYS.profile);
 
     if (!issuerData || !isValidURL(issuerData)) {
       this.progressCallback(Stages.validateCredentialIssuer, Messages.ISSUER_VALIDATION, false, Messages.FETCHING_ISSUER_PROFILE_ERROR);
@@ -69,7 +69,7 @@ export class CredentialIssuerValidator {
     try {
       this.issuerProfileData = await getDataFromAPI(issuerData);
 
-      if (!this.issuerProfileData) {
+      if (!Object.keys(this.issuerProfileData)?.length) {
         this.progressCallback(Stages.validateCredentialIssuer, Messages.ISSUER_VALIDATION, false, Messages.FETCHING_ISSUER_PROFILE_ERROR);
         return { status: false, message: Messages.FETCHING_ISSUER_PROFILE_ERROR };
       }
@@ -159,12 +159,13 @@ export class CredentialIssuerValidator {
         this.issuerProfileData,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.id
       );
+
       if (
         idData &&
         idData ===
         getDataFromKey(
-          this.credential,
-          CREDENTIALS_ISSUER_VALIDATORS_KEYS.issuer
+          this.credential.issuer,
+          CREDENTIALS_ISSUER_VALIDATORS_KEYS.profile
         )
       ) {
         this.progressCallback(Stages.validateIssuerProfileID, Messages.ID_ISSUER_PROFILE_KEY_VALIDATE, true, Messages.ID_ISSUER_PROFILE_KEY_SUCCESS);

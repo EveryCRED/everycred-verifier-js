@@ -54,7 +54,9 @@ export class CredentialValidator {
         this.credential,
         CREDENTIALS_VALIDATORS_KEYS.type
       );
-      if (typeData.includes(CREDENTIALS_CONSTANTS.verifiable_credential)) {
+      if (
+        CREDENTIALS_CONSTANTS.verifiable_credential.some((data) => typeData.includes(data))
+      ) {
         this.progressCallback(Stages.validateCredentialType, Messages.TYPE_KEY_VALIDATE, true, Messages.TYPE_KEY_SUCCESS);
         return { step: Stages.validateCredentialType, title: Messages.TYPE_KEY_VALIDATE, status: true, reason: Messages.TYPE_KEY_SUCCESS };
       }
@@ -123,9 +125,9 @@ export class CredentialValidator {
       );
 
       if (
-        credentialSubjectData &&
-        CREDENTIALS_CONSTANTS.credentialSubjectRequiredKeys.every((data) =>
-          Object.keys(credentialSubjectData).includes(data)
+        Object.keys(credentialSubjectData).length &&
+        CREDENTIALS_CONSTANTS.credentialSubjectRequiredKeys.every(
+          (data) => Object.keys(credentialSubjectData).includes(data)
         )
       ) {
         let flag = false;
