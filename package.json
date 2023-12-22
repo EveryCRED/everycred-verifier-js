@@ -1,6 +1,6 @@
 {
   "name": "@viitorcloudtechnologies/everycred-verifier-js",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "EveryCRED custom verifier to verify EveryCRED W3C verifiable credentials.",
   "keywords": [
     "credentials",
