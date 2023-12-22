@@ -19,7 +19,6 @@ export enum Stages {
   validateIssuerProfilePublicKey = 'validateIssuerProfilePublicKey',
   validateRevocationListFromIssuerProfile = 'validateRevocationListFromIssuerProfile',
   merkleProofValidation2019 = 'merkleProofValidation2019',
-  getAESDecodedData = 'getAESDecodedData',
   getNormalizedDecodedData = 'getNormalizedDecodedData',
   checkDecodedAnchors = 'checkDecodedAnchors',
   checkDecodedPath = 'checkDecodedPath',

@@ -1,7 +1,5 @@
-import { Buffer } from 'buffer';
 import * as CryptoJS from 'crypto-js';
 import { isEmpty } from 'lodash';
-import sha256 from 'sha256';
 import {
   ALGORITHM_TYPES,
   APPLICATION_JSON,
@@ -58,20 +56,9 @@ export class MerkleProofValidator2019 {
       (await this.checkDecodedMerkleRoot()).status &&
       (await this.checkDecodedTargetHash()).status &&
       (await this.fetchDataFromBlockchainAPI()).status &&
-      (await this.verifyMerkleProof()).status
+      (await this.verifyMerkleRootHash()).status
     ) {
-      const normalizedData = getDataFromKey(
-        this.normalizedDecodedData,
-        CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue
-      );
-      const encodedHash = await this.calculateHash(normalizedData);
-
-      if (this.isMerkleProofVerified && encodedHash === this.decodedData.targetHash) {
-        this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, true, Messages.CALCULATED_HASH_MATCHES_WITH_TARGETHASH);
-      } else {
-        this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, false, Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH);
-        return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
-      }
+      this.verifyMerkleProof();
 
       this.progressCallback(Stages.merkleProofValidation2019, Messages.MERKLE_PROOF_2019_VALIDATION, true, Messages.MERKLE_PROOF_2019_VALIDATION_SUCCESS);
       return { message: Messages.MERKLE_PROOF_2019_VALIDATION, status: true, networkName: this.networkName };
@@ -79,6 +66,21 @@ export class MerkleProofValidator2019 {
 
     this.progressCallback(Stages.merkleProofValidation2019, Messages.MERKLE_PROOF_2019_VALIDATION, false, Messages.MERKLE_PROOF_2019_VALIDATION_FAILED);
     return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
+  }
+
+  private async verifyMerkleProof(): Promise<{ message: string; status: boolean; networkName: string; } | void> {
+    const normalizedData = getDataFromKey(
+      this.normalizedDecodedData,
+      CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue
+    );
+    const encodedHash = await this.calculateHash(normalizedData);
+
+    if (this.isMerkleProofVerified && encodedHash === this.decodedData.targetHash) {
+      this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, true, Messages.CALCULATED_HASH_MATCHES_WITH_TARGETHASH);
+    } else {
+      this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, false, Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH);
+      return { message: Messages.MERKLE_PROOF_2019_VALIDATION_FAILED, status: false, networkName: '' };
+    }
   }
 
   /**
@@ -90,71 +92,36 @@ export class MerkleProofValidator2019 {
   private async getData(credentialData: any) {
     this.credential = deepCloneData(credentialData);
 
-    switch (this.credential?.proof?.type) {
-      case ALGORITHM_TYPES.MERKLEPROOF:
-        this.normalizedDecodedData = await this.getNormalizedDecodedData(ALGORITHM_TYPES.MERKLEPROOF);
-        this.decodedData = getDataFromKey(
-          this.normalizedDecodedData,
-          CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
-        );
-        break;
-
-      case ALGORITHM_TYPES.AES:
-        this.normalizedDecodedData = await this.getNormalizedDecodedData(ALGORITHM_TYPES.AES);
-        this.decodedData = JSON.parse(await this.getAESDecodedData());
-        break;
-
-      default:
-        this.decodedData = {};
-        break;
+    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519VERIFICATIONKEY2018 || Object.keys(this.credential?.proof?.merkleProof).length) {
+      this.normalizedDecodedData = await this.getNormalizedData();
+      this.decodedData = getDataFromKey(
+        this.normalizedDecodedData,
+        CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
+      );
+    } else if (this.credential?.proof?.type === ALGORITHM_TYPES.MERKLEPROOF) {
+      this.normalizedDecodedData = await this.getNormalizedDecodedData(ALGORITHM_TYPES.MERKLEPROOF);
+      this.decodedData = getDataFromKey(
+        this.normalizedDecodedData,
+        CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
+      );
+    } else {
+      this.decodedData = {};
     }
   }
 
   /**
-   * The function `getAESDecodedData` decrypts a given proof value using AES encryption with a specified
-   * key and initialization vector.
-   * @returns The decrypted data as a string in UTF-8 encoding.
+   * The function `getNormalizedData` returns an object with a stringified version of `this.credential`
+   * and the `merkleProof` value from `this.credential.proof`.
+   * @returns an object with two properties: "get_byte_array_to_issue" and "decoded_proof_value". The
+   * value of "get_byte_array_to_issue" is a stringified JSON representation of the "dataToNormalize"
+   * object, with the "proof" property removed. The value of "decoded_proof_value" is the value of
+   * "this.credential.proof.merkleProof".
    */
-  private async getAESDecodedData(): Promise<any> {
-    const proofValue = getDataFromKey(
-      this.credential.proof,
-      CHECKSUM_MERKLEPROOF_CHECK_KEYS.proofValue
-    );
-    const AES_128_KEY = getDataFromKey(
-      this.credential.proof.proofDecodingKeys,
-      CHECKSUM_MERKLEPROOF_CHECK_KEYS.AES_128_KEY
-    );
-    const AES_128_IV = getDataFromKey(
-      this.credential.proof.proofDecodingKeys,
-      CHECKSUM_MERKLEPROOF_CHECK_KEYS.AES_128_IV
-    );
+  private async getNormalizedData() {
+    const dataToNormalize = { ...this.credential };
+    delete dataToNormalize.proof;
 
-    if (!proofValue?.length || !AES_128_IV?.length || !AES_128_KEY?.length) {
-      this.progressCallback(Stages.getAESDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_AES_NORMALIZED_DECODED_DATA_ERROR);
-      return {};
-    }
-
-    this.progressCallback(Stages.getAESDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, true, Messages.FETCHING_AES_NORMALIZED_DECODED_DATA_SUCCESS);
-    return this.AESDecrypt(proofValue, AES_128_KEY, AES_128_IV);
-  }
-
-  /**
-   * The function AESDecrypt takes a proofValue, AES_128_KEY, and AES_128_IV as input and uses AES
-   * encryption to decrypt the proofValue and return the decrypted string.
-   * @param {string} proofValue - The `proofValue` parameter is the encrypted value that you want to
-   * decrypt using AES-128 encryption.
-   * @param {string} AES_128_KEY - The AES_128_KEY parameter is a string that represents the 128-bit
-   * encryption key used for AES decryption.
-   * @param {string} AES_128_IV - The AES_128_IV parameter is the initialization vector used for AES
-   * decryption. It is a string representation of the 128-bit IV value.
-   * @returns a decrypted string.
-   */
-  private AESDecrypt(proofValue: string, AES_128_KEY: string, AES_128_IV: string): string {
-    return CryptoJS.AES.decrypt(
-      proofValue,
-      CryptoJS.enc.Utf8.parse(AES_128_KEY),
-      { iv: CryptoJS.enc.Utf8.parse(AES_128_IV), mode: CryptoJS.mode.CBC }
-    ).toString(CryptoJS.enc.Utf8);
+    return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: this.credential?.proof?.merkleProof };
   }
 
   /**
@@ -196,7 +163,7 @@ export class MerkleProofValidator2019 {
  * @returns an object with two properties: "message" and "status". The "message" property contains a
  * string value, and the "status" property contains a boolean value.
  */
-  private validateNormalizedDecodedData(response: any): { message: string; status: boolean; } {
+  private validateNormalizedDecodedData(response: unknown): { message: string; status: boolean; } {
     if (
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue)
@@ -406,7 +373,7 @@ export class MerkleProofValidator2019 {
    * matches with the merkle root or not. The `status` property is a boolean value indicating whether the
    * merkle proof is verified or not.
    */
-  private async verifyMerkleProof(): Promise<{ message: string; status: boolean; }> {
+  private async verifyMerkleRootHash(): Promise<{ message: string; status: boolean; }> {
     const targetHash = getDataFromKey(
       this.decodedData,
       CHECKSUM_MERKLEPROOF_CHECK_KEYS.targetHash
@@ -431,12 +398,10 @@ export class MerkleProofValidator2019 {
     for (const proofElement of path) {
       if (proofElement.left) {
         const concatenatedHash = proofElement.left + currentHash;
-        const buffer = Buffer.from(concatenatedHash, 'hex');
-        currentHash = await this.calculateHash(buffer);
+        this.calculateHash(concatenatedHash);
       } else if (proofElement.right) {
         const concatenatedHash = currentHash + proofElement.right;
-        const buffer = Buffer.from(concatenatedHash, 'hex');
-        currentHash = await this.calculateHash(buffer);
+        this.calculateHash(concatenatedHash);
       }
     }
 
@@ -488,8 +453,9 @@ export class MerkleProofValidator2019 {
    * @returns The calculateHash function is returning the result of the sha256 function, which is the
    * hash value of the input data.
    */
-  private async calculateHash(data: any): Promise<string> {
-    return sha256(data);
+  private async calculateHash(data: string): Promise<string> {
+    const hashed = CryptoJS.SHA256(data);
+    return hashed.toString(CryptoJS.enc.Hex);
   }
 
 }

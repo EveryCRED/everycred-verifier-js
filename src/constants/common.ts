@@ -23,7 +23,7 @@ export const CREDENTIALS_CONSTANTS = {
     "proofValue",
     "verificationMethod",
   ],
-  proofTypeSupported: ["MerkleProof2019", 'AES-128'],
+  proofTypeSupported: ["MerkleProof2019", "Ed25519VerificationKey2018"],
   issuer_profile_context_values: [
     "https://www.w3.org/2018/credentials/v1",
     "https://www.w3.org/2018/credentials/v2",
@@ -80,9 +80,9 @@ export enum REVOCATION_STATUS_CHECK_KEYS {
   revokedAssertions = "revokedAssertions",
 }
 
-/* The `CHECKSUM_MERKLEPROOF_CHECK_KEYS` enum is defining a set of keys that are used for checking the
-properties of a MerkleProof checksum. Each key is assigned a string value that represents a specific
-property of the checksum. */
+/* The `CHECKSUM_MERKLEPROOF_CHECK_KEYS` enum is defining keys used for checking the checksum of a
+Merkle proof. Each key is assigned a string value that represents a specific property or field
+related to the Merkle proof. */
 export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
   decoded_proof_value = "decoded_proof_value",
   get_byte_array_to_issue = "get_byte_array_to_issue",
@@ -91,8 +91,7 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
   merkleRoot = "merkleRoot",
   targetHash = "targetHash",
   proofValue = 'proofValue',
-  AES_128_KEY = 'AES_128_KEY',
-  AES_128_IV = 'AES_128_IV',
+  publicKey = 'publicKey[0].publicKey',
 }
 
 /* The `BLOCKCHAIN_API_LIST` constant is an array of objects that contains information about different
@@ -154,13 +153,12 @@ export enum HTTP_METHODS {
 }
 
 /* The `export enum ALGORITHM_TYPES` is defining an enumeration called `ALGORITHM_TYPES` that
-represents different algorithm types. It assigns string values to each enum member, where
-`MERKLEPROOF` is assigned the value `"MerkleProof2019"` and `AES` is assigned the value `"AES-128"`.
-This enum can be exported and used in other parts of the code to refer to specific algorithm types,
-providing a convenient way to ensure consistency in the values used for different algorithms. */
+represents different algorithm types used in the code. It assigns string values to each enum member,
+where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519VERIFICATIONKEY2018` is
+assigned the value `'Ed25519VerificationKey2018'`. */
 export enum ALGORITHM_TYPES {
   MERKLEPROOF = 'MerkleProof2019',
-  AES = 'AES-128'
+  ED25519VERIFICATIONKEY2018 = 'Ed25519VerificationKey2018',
 }
 
 /* The line `const APPLICATION_JSON = 'application/json';` is defining a constant variable called

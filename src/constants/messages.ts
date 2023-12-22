@@ -114,12 +114,9 @@ export enum Messages {
   FETCHING_NORMALIZED_DECODED_DATA_SUCCESS = "Fetched normalized and decoded data successfully.",
   FETCHING_NORMALIZED_DECODED_DATA_ERROR = "Error while fetching normalized and decoded data",
 
-  FETCHING_AES_NORMALIZED_DECODED_DATA_SUCCESS = "Fetched normalized and decoded data with AES successfully.",
-  FETCHING_AES_NORMALIZED_DECODED_DATA_ERROR = "Error while fetching normalized and decoded data with AES",
-
   ANCHOR_DECODED_DATA_KEY_VALIDATE = "Validate decoded data anchors",
   ANCHOR_DECODED_DATA_KEY_SUCCESS = "anchors key is present with valid data.",
-  ANCHOR_DECODED_DATA_KEY_ERROR = "Invalid credential.",
+  ANCHOR_DECODED_DATA_KEY_ERROR = "anchors key is not present or having invalid data list.",
 
   PATH_DECODED_DATA_KEY_VALIDATE = "Validate decoded data path",
   PATH_DECODED_DATA_KEY_SUCCESS = "path key is present with valid data.",
