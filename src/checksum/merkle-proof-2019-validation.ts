@@ -1,4 +1,5 @@
-import * as CryptoJS from 'crypto-js';
+import { Buffer } from 'buffer';
+import sha256 from 'sha256';
 import { isEmpty } from 'lodash';
 import {
   ALGORITHM_TYPES,
@@ -120,6 +121,7 @@ export class MerkleProofValidator2019 {
   private async getNormalizedData() {
     const dataToNormalize = { ...this.credential };
     delete dataToNormalize.proof;
+    delete dataToNormalize?.linkedCredentialData;
 
     return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: this.credential?.proof?.merkleProof };
   }
@@ -398,10 +400,12 @@ export class MerkleProofValidator2019 {
     for (const proofElement of path) {
       if (proofElement.left) {
         const concatenatedHash = proofElement.left + currentHash;
-        this.calculateHash(concatenatedHash);
+        const buffer = Buffer.from(concatenatedHash, 'hex');
+        currentHash = await this.calculateHash(buffer);
       } else if (proofElement.right) {
         const concatenatedHash = currentHash + proofElement.right;
-        this.calculateHash(concatenatedHash);
+        const buffer = Buffer.from(concatenatedHash, 'hex');
+        currentHash = await this.calculateHash(buffer);
       }
     }
 
@@ -447,15 +451,12 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function calculates the SHA256 hash of the given data.
-   * @param {any} data - The `data` parameter is the input data for which you want to calculate the hash.
-   * It can be of any type, such as a string, number, object, or array.
-   * @returns The calculateHash function is returning the result of the sha256 function, which is the
-   * hash value of the input data.
+   * The function calculates the SHA256 hash of a given buffer of data.
+   * @param {Buffer} data - The `data` parameter is of type `Buffer`, which is a binary data buffer. It
+   * is the input data for which you want to calculate the hash.
+   * @returns The calculateHash function returns a Promise that resolves to a string.
    */
-  private async calculateHash(data: string): Promise<string> {
-    const hashed = CryptoJS.SHA256(data);
-    return hashed.toString(CryptoJS.enc.Hex);
+  private async calculateHash(data: Buffer): Promise<string> {
+    return sha256(data);
   }
-
 }
