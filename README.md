@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.7 :bookmark_tabs:
+Version: 1.0.8 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -94,4 +94,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.7 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.8 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
