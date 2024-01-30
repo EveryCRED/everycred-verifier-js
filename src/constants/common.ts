@@ -186,3 +186,7 @@ export const DATE_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
 /* The line `export const DATE_TIME_FORMAT_LOCALE = 'en-US';` is defining a constant variable called
 `DATE_TIME_FORMAT_LOCALE` and assigning it the value `'en-US'`. */
 export const DATE_TIME_FORMAT_LOCALE = 'en-US';
+
+/* The line `export const BUFFER_ENCODING_TYPE = 'hex';` is defining a constant variable called
+`BUFFER_ENCODING_TYPE` and assigning it the value `'hex'`. */
+export const BUFFER_ENCODING_TYPE = 'hex';

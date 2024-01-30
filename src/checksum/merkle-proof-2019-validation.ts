@@ -7,6 +7,7 @@ import {
   BASE_API,
   BASE_NETWORK,
   BLOCKCHAIN_API_LIST,
+  BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
   GENERAL_KEYWORDS,
   HTTP_METHODS,
@@ -398,13 +399,13 @@ export class MerkleProofValidator2019 {
     let currentHash = targetHash;
 
     for (const proofElement of path) {
-      if (proofElement.left) {
-        const concatenatedHash = proofElement.left + currentHash;
-        const buffer = Buffer.from(concatenatedHash, 'hex');
+      if (proofElement?.left) {
+        const concatenatedHash = proofElement?.left + currentHash;
+        const buffer = Buffer.from(concatenatedHash, BUFFER_ENCODING_TYPE);
         currentHash = await this.calculateHash(buffer);
-      } else if (proofElement.right) {
-        const concatenatedHash = currentHash + proofElement.right;
-        const buffer = Buffer.from(concatenatedHash, 'hex');
+      } else if (proofElement?.right) {
+        const concatenatedHash = currentHash + proofElement?.right;
+        const buffer = Buffer.from(concatenatedHash, BUFFER_ENCODING_TYPE);
         currentHash = await this.calculateHash(buffer);
       }
     }
