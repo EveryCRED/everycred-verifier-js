@@ -23,7 +23,7 @@ export const CREDENTIALS_CONSTANTS = {
     "proofValue",
     "verificationMethod",
   ],
-  proofTypeSupported: ["MerkleProof2019", "Ed25519VerificationKey2018"],
+  proofTypeSupported: ["MerkleProof2019", "Ed25519Signature2020"],
   issuer_profile_context_values: [
     "https://www.w3.org/2018/credentials/v1",
     "https://www.w3.org/2018/credentials/v2",
@@ -154,11 +154,11 @@ export enum HTTP_METHODS {
 
 /* The `export enum ALGORITHM_TYPES` is defining an enumeration called `ALGORITHM_TYPES` that
 represents different algorithm types used in the code. It assigns string values to each enum member,
-where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519VERIFICATIONKEY2018` is
-assigned the value `'Ed25519VerificationKey2018'`. */
+where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519SIGNATURE2018` is
+assigned the value `'Ed25519Signature2020'`. */
 export enum ALGORITHM_TYPES {
   MERKLEPROOF = 'MerkleProof2019',
-  ED25519VERIFICATIONKEY2018 = 'Ed25519VerificationKey2018',
+  ED25519SIGNATURE2018 = 'Ed25519Signature2020',
 }
 
 /* The line `const APPLICATION_JSON = 'application/json';` is defining a constant variable called

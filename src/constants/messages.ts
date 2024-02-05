@@ -141,17 +141,18 @@ export enum Messages {
   DATA_FETCHED_SUCCESS = "Data successfully fetched from the blockchain API.",
 
   MERKLE_PROOF_VALIDATE = 'Validate Merkleproof',
-
   CALCULATED_HASH_DIFFER_FROM_MERKLEROOT = "The calculated hash does not match the provided merkleRoot.",
   CALCULATED_HASH_MATCHES_WITH_MERKLEROOT = "The calculated hash matches the provided merkleRoot.",
 
   VALIDATE_TARGET_HASH = 'Validate target hash',
-
   CALCULATED_HASH_DIFFER_FROM_TARGETHASH = "The calculated hash does not match the provided targetHash.",
   CALCULATED_HASH_MATCHES_WITH_TARGETHASH = "The calculated hash matches the provided targetHash.",
 
-  MERKLE_PROOF_2019_VALIDATION = "MerkleProof2019 validation",
-  MERKLE_PROOF_2019_VALIDATION_SUCCESS = "MerkleProof2019 validation successful.",
-  MERKLE_PROOF_2019_VALIDATION_FAILED = "MerkleProof2019 validation failed.",
+  SIGNATURE_VERIFICATION = "Signature Verification",
+  SIGNATURE_VERIFICATION_FAILED = "Signature Verification Failed",
+  SIGNATURE_VERIFICATION_SUCCESS = "Signature Verification Successful",
 
+  DATA_INTEGRITY_CHECK = "Data Integrity Check",
+  DATA_INTEGRITY_CHECK_SUCCESS = "Data Integrity Check successful.",
+  DATA_INTEGRITY_CHECK_FAILED = "Data Integrity Check failed.",
 }
