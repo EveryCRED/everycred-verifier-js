@@ -149,8 +149,8 @@ export enum Messages {
   CALCULATED_HASH_MATCHES_WITH_TARGETHASH = "The calculated hash matches the provided targetHash.",
 
   SIGNATURE_VERIFICATION = "Signature Verification",
-  SIGNATURE_VERIFICATION_FAILED = "Signature Verification Failed",
-  SIGNATURE_VERIFICATION_SUCCESS = "Signature Verification Successful",
+  SIGNATURE_VERIFICATION_FAILED = "Signature Verification failed.",
+  SIGNATURE_VERIFICATION_SUCCESS = "Signature Verification successful.",
 
   DATA_INTEGRITY_CHECK = "Data Integrity Check",
   DATA_INTEGRITY_CHECK_SUCCESS = "Data Integrity Check successful.",
