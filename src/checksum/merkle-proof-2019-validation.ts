@@ -116,7 +116,6 @@ export class MerkleProofValidator2019 {
     try {
       const dataToVerify = { ...this.credential };
       delete dataToVerify.proof;
-      delete dataToVerify.linkedCredentialData;
 
       // Convert data object to Uint8Array
       const dataString = JSON.stringify(dataToVerify);
@@ -177,7 +176,6 @@ export class MerkleProofValidator2019 {
   private async getNormalizedData() {
     const dataToNormalize = { ...this.credential };
     delete dataToNormalize.proof;
-    delete dataToNormalize?.linkedCredentialData;
 
     return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: this.credential?.proof?.merkleProof };
   }
