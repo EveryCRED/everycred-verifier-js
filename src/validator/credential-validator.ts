@@ -10,6 +10,7 @@ import {
 } from "../constants/common";
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
+import { ProcessStepStatus, ResponseMessage } from '../models/common.model';
 
 export class CredentialValidator {
   private credential: any;
@@ -24,7 +25,7 @@ export class CredentialValidator {
    * @returns The function `validate` returns a promise that resolves to an object with two properties:
    * `message` and `status`.
    */
-  async validate(credentialData: any): Promise<{ message: string; status: boolean; }> {
+  async validate(credentialData: any): Promise<ResponseMessage> {
     this.credential = deepCloneData(credentialData);
 
     if (
@@ -48,7 +49,7 @@ export class CredentialValidator {
    * `credential` object and returns a boolean value indicating whether it is valid or not.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialType(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialType(): Promise<ProcessStepStatus> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.type)) {
       let typeData: string[] = getDataFromKey(
         this.credential,
@@ -72,7 +73,7 @@ export class CredentialValidator {
    * otherwise.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialContext(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialContext(): Promise<ProcessStepStatus> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.context)) {
       let contextData: string[] = getDataFromKey(
         this.credential,
@@ -95,7 +96,7 @@ export class CredentialValidator {
    * returns true if it is, otherwise it logs an error message and returns false.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialID(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialID(): Promise<ProcessStepStatus> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
       if (getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.id)) {
         this.progressCallback(Stages.validateCredentialID, Messages.ID_KEY_VALIDATE, true, Messages.ID_KEY_SUCCESS);
@@ -112,7 +113,7 @@ export class CredentialValidator {
    * `credentialSubject` object and returns true if they are, otherwise it returns false.
    * @returns a Promise<boolean>.
    */
-  private async validateCredentialSubject(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialSubject(): Promise<ProcessStepStatus> {
     if (
       isKeyPresent(
         this.credential,
@@ -155,7 +156,7 @@ export class CredentialValidator {
    * validates its data.
    * @returns a Promise<boolean>.
    */
-  private async validateCredentialProof(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialProof(): Promise<ProcessStepStatus> {
     if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
       let proofData = getDataFromKey(
         this.credential,
@@ -198,7 +199,7 @@ export class CredentialValidator {
    * otherwise it returns false and logs an error message.
    * @returns a Promise that resolves to a boolean value.
    */
-  private async validateCredentialIssuanceDate(): Promise<{ step: string, title: string, status: boolean, reason: string; }> {
+  private async validateCredentialIssuanceDate(): Promise<ProcessStepStatus> {
     if (
       isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.issuanceDate)
     ) {

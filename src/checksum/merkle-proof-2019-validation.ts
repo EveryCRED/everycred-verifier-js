@@ -18,6 +18,8 @@ import {
 } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
+import { CreateResponse, NetworkResponseStatus } from '../models/checksum.model';
+import { ResponseMessage } from '../models/common.model';
 import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import {
   deepCloneData,
@@ -48,7 +50,7 @@ export class MerkleProofValidator2019 {
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
-  async validate(credentialData: any): Promise<{ message: string; status: boolean; networkName: string; }> {
+  async validate(credentialData: any): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
     if (isObjectEmpty(this.decodedData)) {
@@ -90,7 +92,7 @@ export class MerkleProofValidator2019 {
    * - status: A boolean indicating whether the data integrity check was successful or not.
    * - networkName: A string indicating the name of the network.
    */
-  private async verifyMerkleProof(): Promise<{ message: string; status: boolean; networkName: string; }> {
+  private async verifyMerkleProof(): Promise<NetworkResponseStatus> {
     const normalizedData = getDataFromKey(
       this.normalizedDecodedData,
       CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue
@@ -112,7 +114,7 @@ export class MerkleProofValidator2019 {
    * @returns The function `verifyEd25519` returns a Promise that resolves to an object with the
    * following properties:
    */
-  private async verifyEd25519(): Promise<{ message: string; status: boolean; networkName: string; }> {
+  private async verifyEd25519(): Promise<NetworkResponseStatus> {
     try {
       const dataToVerify = { ...this.credential };
       delete dataToVerify.proof;
@@ -219,7 +221,7 @@ export class MerkleProofValidator2019 {
  * @returns an object with two properties: "message" and "status". The "message" property contains a
  * string value, and the "status" property contains a boolean value.
  */
-  private validateNormalizedDecodedData(response: unknown): { message: string; status: boolean; } {
+  private validateNormalizedDecodedData(response: unknown): ResponseMessage {
     if (
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
       !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue)
@@ -238,7 +240,7 @@ export class MerkleProofValidator2019 {
    * @returns an object with two properties: "message" and "status". The "message" property is a string
    * and the "status" property is a boolean.
    */
-  private async checkDecodedAnchors(): Promise<{ message: string; status: boolean; }> {
+  private async checkDecodedAnchors(): Promise<ResponseMessage> {
     await sleep(250);
 
     if (
@@ -270,7 +272,7 @@ export class MerkleProofValidator2019 {
    * "Messages.PATH_DECODED_DATA_KEY_ERROR". The "status" property is set to true if the condition is
    * met, otherwise it is set to false.
    */
-  private async checkDecodedPath(): Promise<{ message: string; status: boolean; }> {
+  private async checkDecodedPath(): Promise<ResponseMessage> {
     await sleep(500);
 
     if (
@@ -293,7 +295,7 @@ export class MerkleProofValidator2019 {
    * @returns a Promise that resolves to an object with two properties: "message" and "status". The
    * "message" property is a string and the "status" property is a boolean.
    */
-  private async checkDecodedMerkleRoot(): Promise<{ message: string; status: boolean; }> {
+  private async checkDecodedMerkleRoot(): Promise<ResponseMessage> {
     await sleep(750);
 
     if (
@@ -322,7 +324,7 @@ export class MerkleProofValidator2019 {
    * @returns an object with two properties: "message" and "status". The "message" property is a string
    * and the "status" property is a boolean.
    */
-  private async checkDecodedTargetHash(): Promise<{ message: string; status: boolean; }> {
+  private async checkDecodedTargetHash(): Promise<ResponseMessage> {
     await sleep(1000);
 
     if (
@@ -351,7 +353,7 @@ export class MerkleProofValidator2019 {
    * @returns The function `fetchDataFromBlockchainAPI` returns a Promise that resolves to an object
    * with two properties: `message` and `status`.
    */
-  private async fetchDataFromBlockchainAPI(): Promise<{ message: string; status: boolean; }> {
+  private async fetchDataFromBlockchainAPI(): Promise<ResponseMessage> {
     // Fetching the selected anchor from decodedData
     const anchorParts = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':') || [];
     if (!anchorParts?.length) {
@@ -429,7 +431,7 @@ export class MerkleProofValidator2019 {
    * matches with the merkle root or not. The `status` property is a boolean value indicating whether the
    * merkle proof is verified or not.
    */
-  private async verifyMerkleRootHash(): Promise<{ message: string; status: boolean; }> {
+  private async verifyMerkleRootHash(): Promise<ResponseMessage> {
     const targetHash = getDataFromKey(
       this.decodedData,
       CHECKSUM_MERKLEPROOF_CHECK_KEYS.targetHash
@@ -527,7 +529,7 @@ export class MerkleProofValidator2019 {
  * @returns an object with three properties: "message" (string), "status" (boolean), and "networkName"
  * (string).
  */
-  private createResponse(stage: Stages, message: string, status: boolean, networkName: string): { message: string; status: boolean; networkName: string; } {
+  private createResponse(stage: Stages, message: string, status: boolean, networkName: string): CreateResponse {
     this.progressCallback(stage, message, status, status ? Messages.DATA_INTEGRITY_CHECK_SUCCESS : Messages.DATA_INTEGRITY_CHECK_FAILED);
     return { message, status, networkName };
   }
