@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.8 :bookmark_tabs:
+Version: 1.0.9 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -61,6 +61,7 @@ The verifier performs detailed verification steps on the package:
    - **Note**: For the first version, only "MerkleProof2019" is supported.
    - Decode "proofValue" and extract signature details.
       - We use **MerkleProof2019** algorithm to decode the "proofValue" and extract the signature details. This will be used for the previously issued credentials.
+      - We use **ED25519** algorithm to decode the "proofValue" and extract the signature details. This will be used for the newly issued credentials.
 
    - Validate the existence of the "anchors" keyword with valid data.
    - Ensure that the following key fields exist in your credentials:
@@ -94,4 +95,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.8 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.9 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
