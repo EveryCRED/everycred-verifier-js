@@ -154,7 +154,7 @@ export enum HTTP_METHODS {
 
 /* The `export enum ALGORITHM_TYPES` is defining an enumeration called `ALGORITHM_TYPES` that
 represents different algorithm types used in the code. It assigns string values to each enum member,
-where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519SIGNATURE2018` is
+where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519SIGNATURE2020` is
 assigned the value `'Ed25519Signature2020'`. */
 export enum ALGORITHM_TYPES {
   MERKLEPROOF = 'MerkleProof2019',
