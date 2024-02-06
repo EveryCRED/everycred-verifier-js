@@ -72,7 +72,7 @@ export class MerkleProofValidator2019 {
 
     let verificationStatus = false;
 
-    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2018) {
+    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
       verificationStatus = (await this.verifyEd25519()).status;
     } else {
       verificationStatus = (await this.verifyMerkleProof()).status;
@@ -150,7 +150,7 @@ export class MerkleProofValidator2019 {
   private async getData(credentialData: any): Promise<void> {
     this.credential = deepCloneData(credentialData);
 
-    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2018 || Object.keys(this.credential?.proof?.merkleProof).length) {
+    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(this.credential?.proof?.merkleProof).length) {
       this.normalizedDecodedData = await this.getNormalizedData();
       this.decodedData = getDataFromKey(
         this.normalizedDecodedData,

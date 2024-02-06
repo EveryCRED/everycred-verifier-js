@@ -158,7 +158,7 @@ where `MERKLEPROOF` is assigned the value `'MerkleProof2019'` and `ED25519SIGNAT
 assigned the value `'Ed25519Signature2020'`. */
 export enum ALGORITHM_TYPES {
   MERKLEPROOF = 'MerkleProof2019',
-  ED25519SIGNATURE2018 = 'Ed25519Signature2020',
+  ED25519SIGNATURE2020 = 'Ed25519Signature2020',
 }
 
 /* The line `const APPLICATION_JSON = 'application/json';` is defining a constant variable called
