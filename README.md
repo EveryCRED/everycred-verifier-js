@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.9 :bookmark_tabs:
+Version: 1.0.10 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -91,8 +91,8 @@ The verifier performs detailed verification steps on the package:
      - Find the credential ID in the revocation list and return a message if revoked.
      - If the ID matches, retrieve the revocation message and indicate that the credential is revoked with the given message.
      - If not matched, consider the credential valid and not revoked.
-   - **Expiration (ValidUntil) (Optional)** :date:: Validate today's date with the "validUntil" date if it exists.
+   - **Expiration (ValidFrom & ValidUntil)** :date:: Validate today's date with the "validFrom" & "validUntil" dates.
 
 ## Package Notes :memo:
 
-Version 1.0.9 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.10 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
