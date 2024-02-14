@@ -135,7 +135,7 @@ export enum GENERAL_KEYWORDS {
 /* The `MERKLE_TREE` constant is an object that contains properties related to the validation of a
 Merkle tree. */
 export const MERKLE_TREE = {
-  validation_api: "/user/credential/markel_tree_verification?merkel_tree_data=",
+  validation_api: 'user/credential/merkle_tree_verification?merkle_tree_data=',
   data_type: "normalize_data",
   algorithm: "&algorithm="
 };
