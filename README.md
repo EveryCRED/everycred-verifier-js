@@ -1,8 +1,8 @@
-![EveryCRED Logo](https://camo.githubusercontent.com/f87a93c5e07d87f9f28ab6bb05b03e3282818f74a6b8a846c9f81acaa7ce8591/68747470733a2f2f6576657279637265642d7075626c69632e73332e61702d736f7574682d312e616d617a6f6e6177732e636f6d2f6c6f676f732f626c6f636b6e65745f6c6f676f2e706e67)
+![EveryCRED Logo](src/assets/images/image.png)
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.10 :bookmark_tabs:
+Version: 1.0.11 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -95,4 +95,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.10 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.11 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
