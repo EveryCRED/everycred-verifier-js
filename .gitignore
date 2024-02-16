@@ -45,9 +45,6 @@ testem.log
 .DS_Store
 Thumbs.db
 
-# Configuration files
-config.ts
-
 # Ignore the dist folder
 /dist
 
