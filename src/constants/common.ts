@@ -190,3 +190,31 @@ export const DATE_TIME_FORMAT_LOCALE = 'en-US';
 /* The line `export const BUFFER_ENCODING_TYPE = 'hex';` is defining a constant variable called
 `BUFFER_ENCODING_TYPE` and assigning it the value `'hex'`. */
 export const BUFFER_ENCODING_TYPE = 'hex';
+
+/** The `export enum EnvironmentApis` is defining an enumeration
+ *  called `EnvironmentApis` that represents different environments or APIs.
+ * It assigns string values to each enum member.
+*/
+export enum EnvironmentApis {
+  Production = 'https://verifier.everycred.com',
+  Staging = 'https://staging-verifier.everycred.com',
+  Development = 'https://evrc-verifier.everycred.com',
+  Local = 'http://localhost:4200',
+}
+
+/** The code `API_URLS` is creating a constant variable called `API_URLS`
+ * and assigning it a new `Map` object.
+*/
+export const API_URLS = new Map<EnvironmentApis, string>([
+  [EnvironmentApis.Production, 'https://product-api.everycred.com'],
+  [EnvironmentApis.Staging, 'https://service-api.everycred.com'],
+  [EnvironmentApis.Development, 'https://evrc-service.everycred.com'],
+  [EnvironmentApis.Local, 'https://evrc-service.everycred.com'],
+]);
+
+/** Below line is defining a constant variable called `DEFAULT_API_URL`
+ * and assigning it the value `'https://product-api.everycred.com'`.
+ * This constant represents the default API URL that will be used
+ * if no specific API URL is provided.
+*/
+export const DEFAULT_API_URL = 'https://product-api.everycred.com';

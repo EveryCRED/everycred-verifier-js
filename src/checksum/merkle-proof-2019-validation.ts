@@ -20,7 +20,6 @@ import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { CreateResponse, NetworkResponseStatus } from '../models/checksum.model';
 import { ResponseMessage } from '../models/common.model';
-import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/config';
 import {
   deepCloneData,
   getDataFromAPI,
@@ -30,6 +29,7 @@ import {
 } from '../utils/credential-util';
 import { logger } from '../utils/logger';
 import { sleep } from '../utils/sleep';
+import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/url.config';
 
 export class MerkleProofValidator2019 {
   private credential: any;
