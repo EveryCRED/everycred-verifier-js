@@ -5,6 +5,7 @@ export enum Stages {
   validateCredentialType = 'validateCredentialType',
   validateCredentialContext = 'validateCredentialContext',
   validateCredentialID = 'validateCredentialID',
+  validateIssuer = 'validateIssuer',
   validateCredentialSubject = 'validateCredentialSubject',
   validateCredentialProof = 'validateCredentialProof',
   validateCredentialIssuanceDate = 'validateCredentialIssuanceDate',

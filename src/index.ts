@@ -55,7 +55,7 @@ export class EveryCredVerifier {
    * @returns a Promise<boolean>.
    */
   private async validateCredentials(): Promise<boolean> {
-    await sleep(250);
+    await sleep(150);
 
     const credentialValidator = new CredentialValidator(this.progressCallback);
     const result = await credentialValidator.validate(this.certificate);
