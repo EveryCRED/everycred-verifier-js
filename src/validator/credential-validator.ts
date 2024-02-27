@@ -33,6 +33,7 @@ export class CredentialValidator {
       (await this.validateCredentialContext()).status &&
       (await this.validateCredentialID()).status &&
       (await this.validateCredentialSubject()).status &&
+      (await this.validateIssuer()).status &&
       (await this.validateCredentialProof()).status &&
       (await this.validateCredentialIssuanceDate()).status
     ) {
@@ -125,22 +126,12 @@ export class CredentialValidator {
         CREDENTIALS_VALIDATORS_KEYS.credentialSubject
       );
 
-      if (
-        Object.keys(credentialSubjectData).length &&
-        CREDENTIALS_CONSTANTS.credentialSubjectRequiredKeys.every(
-          (data) => Object.keys(credentialSubjectData).includes(data)
-        )
-      ) {
-        let flag = false;
+      if (Object.keys(credentialSubjectData).length) {
+        const hasRequiredKeys = CREDENTIALS_CONSTANTS.credentialSubjectRequiredKeys.every(key =>
+          Object.keys(credentialSubjectData).includes(key) && credentialSubjectData[key]
+        );
 
-        for (const key of CREDENTIALS_CONSTANTS.credentialSubjectRequiredKeys) {
-          if (!credentialSubjectData[key]) {
-            flag = true;
-            break;
-          }
-        }
-
-        if (!flag) {
+        if (hasRequiredKeys) {
           this.progressCallback(Stages.validateCredentialSubject, Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, true, Messages.CREDENTIAL_SUBJECT_KEY_SUCCESS);
           return { step: Stages.validateCredentialSubject, title: Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, status: true, reason: Messages.CREDENTIAL_SUBJECT_KEY_SUCCESS };
         }
@@ -149,6 +140,51 @@ export class CredentialValidator {
 
     this.progressCallback(Stages.validateCredentialSubject, Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, false, Messages.CREDENTIAL_SUBJECT_KEY_ERROR);
     return { step: Stages.validateCredentialSubject, title: Messages.CREDENTIAL_SUBJECT_KEY_VALIDATE, status: false, reason: Messages.CREDENTIAL_SUBJECT_KEY_ERROR };
+  }
+
+  /**
+   * The function `validateIssuer` checks if the required issuer keys are present in the credential
+   * data and returns a status based on the validation result.
+   * @returns This `validateIssuer` function returns a `ProcessStepStatus` object with properties
+   * `step`, `title`, `status`, and `reason`. The returned object contains information about the
+   * validation status of the issuer key in the credential being processed.
+   */
+  private async validateIssuer(): Promise<ProcessStepStatus> {
+    if (
+      isKeyPresent(
+        this.credential,
+        CREDENTIALS_VALIDATORS_KEYS.issuer
+      )
+    ) {
+      let issuerData = getDataFromKey(
+        this.credential,
+        CREDENTIALS_VALIDATORS_KEYS.issuer
+      );
+
+      if (
+        Object.keys(issuerData).length &&
+        CREDENTIALS_CONSTANTS.issuerRequiredKeys.every(
+          (data) => Object.keys(issuerData).includes(data)
+        )
+      ) {
+        let flag = false;
+
+        for (const key of CREDENTIALS_CONSTANTS.issuerRequiredKeys) {
+          if (!issuerData[key]) {
+            flag = true;
+            break;
+          }
+        }
+
+        if (!flag) {
+          this.progressCallback(Stages.validateIssuer, Messages.ISSUER_KEY_VALIDATE, true, Messages.ISSUER_KEY_SUCCESS);
+          return { step: Stages.validateIssuer, title: Messages.ISSUER_KEY_VALIDATE, status: true, reason: Messages.ISSUER_KEY_SUCCESS };
+        }
+      }
+    }
+
+    this.progressCallback(Stages.validateIssuer, Messages.ISSUER_KEY_VALIDATE, false, Messages.ISSUER_KEY_ERROR);
+    return { step: Stages.validateIssuer, title: Messages.ISSUER_KEY_VALIDATE, status: false, reason: Messages.ISSUER_KEY_ERROR };
   }
 
   /**

@@ -15,8 +15,12 @@ export enum Messages {
   ID_KEY_ERROR = "Credential id key is not present or having invalid data in the credential.",
 
   CREDENTIAL_SUBJECT_KEY_VALIDATE = "Validate Credential credentialSubject",
-  CREDENTIAL_SUBJECT_KEY_SUCCESS = "Credential credential subject key is present in the certificate with valid data.",
-  CREDENTIAL_SUBJECT_KEY_ERROR = "Credential credentialSubject key is not present or having invalid data in the credential.",
+  CREDENTIAL_SUBJECT_KEY_SUCCESS = "credentialSubject key is present in the certificate with valid data.",
+  CREDENTIAL_SUBJECT_KEY_ERROR = "credentialSubject key is not present or having invalid data in the credential.",
+
+  ISSUER_KEY_VALIDATE = "Validate Credential issuer",
+  ISSUER_KEY_SUCCESS = "issuer key is present in the certificate with valid data.",
+  ISSUER_KEY_ERROR = "issuer key is not present or having invalid data in the credential.",
 
   CREDENTIALS_VALIDATION = "Credentials validation",
   CREDENTIALS_VALIDATION_SUCCESS = "Credentials validation succeeded",
@@ -37,9 +41,6 @@ export enum Messages {
   ISSUER_VALIDATION = 'Issuer validation',
   ISSUER_VALIDATION_SUCCESS = 'Issuer validation succeeded',
   ISSUER_VALIDATION_FAILED = 'Issuer validation failed',
-
-  ISSUER_KEY_SUCCESS = "Credential issuer validation successful.",
-  ISSUER_KEY_ERROR = "Credential issuer key is not present or having invalid data in the credential.",
 
   FETCHING_ISSUER_PROFILE = "Fetching issuer validation started",
   FETCHING_ISSUER_PROFILE_SUCCESS = "Issuer profile details fetched successfully.",

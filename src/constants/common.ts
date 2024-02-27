@@ -16,6 +16,7 @@ export const CREDENTIALS_CONSTANTS = {
     'https://w3id.org/everycred/v1'
   ],
   credentialSubjectRequiredKeys: ['id', 'profile'],
+  issuerRequiredKeys: ['id', 'profile'],
   proofRequiredKeys: [
     'type',
     'created',
@@ -50,7 +51,8 @@ export enum CREDENTIALS_VALIDATORS_KEYS {
   proof = 'proof',
   issuanceDate = 'issuanceDate',
   validUntilDate = 'validUntil',
-  validFromDate = 'validFrom'
+  validFromDate = 'validFrom',
+  issuer = 'issuer'
 }
 
 /* Defining an enum called `CREDENTIALS_ISSUER_VALIDATORS_KEYS` which contains keys used for validating
