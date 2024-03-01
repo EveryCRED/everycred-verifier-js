@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.13 :bookmark_tabs:
+Version: 1.0.14 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -54,7 +54,6 @@ The verifier performs detailed verification steps on the package:
    - **Proof** :heavy_check_mark:: Check the existence and validity of the "proof" field.
      - Validate the fields within the proof.
      - Verify the support for the current proof type ("MerkleProof2019").
-   - **DisplayHtml (Optional)** :heavy_check_mark:: Check the existence of the "displayHtml" field.
    - **IssuanceDate** :heavy_check_mark:: Check the existence of the "issuanceDate" field.
 
 2. **Checksum Match (Hash Comparison)** :arrows_clockwise:: Compare hashes to ensure the integrity of the credential.
@@ -95,4 +94,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.13 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.14 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
