@@ -201,6 +201,7 @@ export enum EnvironmentApis {
   Production = 'https://verifier.everycred.com',
   Staging = 'https://staging-verifier.everycred.com',
   Development = 'https://evrc-verifier.everycred.com',
+  Demo = 'https://demo-verifier.everycred.com',
   Local = 'http://localhost:4200',
 }
 
@@ -212,6 +213,7 @@ export const API_URLS = new Map<EnvironmentApis, string>([
   [EnvironmentApis.Staging, 'https://service-api.everycred.com'],
   [EnvironmentApis.Development, 'https://evrc-service.everycred.com'],
   [EnvironmentApis.Local, 'https://evrc-service.everycred.com'],
+  [EnvironmentApis.Demo, 'https://demo-service-api.everycred.com'],
 ]);
 
 /** Below line is defining a constant variable called `DEFAULT_API_URL`
