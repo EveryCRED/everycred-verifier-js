@@ -105,7 +105,7 @@ export const BLOCKCHAIN_API_LIST = [
   { id: 'ethereumSepolia', url: 'https://api-sepolia.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
   { id: 'polygonMainnet', url: 'https://api.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
   { id: 'polygonTestnet', url: 'https://api-testnet.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
-  { id: 'polygonAmoy', url: 'https://rpc-amoy.polygon.technology/' },
+  { id: 'polygonAmoy', url: 'https://rpc-amoy.polygon.technology/', apiKey: '9876543210' }, // No API Key is needed, provided placeholder
 ];
 
 /* The `export enum BASE_API` is defining an enumeration called `BASE_API` that represents different
