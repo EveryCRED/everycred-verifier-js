@@ -2,7 +2,7 @@
 
 # EveryCRED Verifier JS :lock:
 
-Version: 1.0.15 :bookmark_tabs:
+Version: 1.0.16 :bookmark_tabs:
 
 EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -71,10 +71,10 @@ The verifier performs detailed verification steps on the package:
    - Separate the transaction ID and blink value.
    - Apply chain condition and call the corresponding API:
      - EthereumMainnet
-     - EthereumRopsten
      - EthereumSepolia
      - PolygonMainnet
      - PolygonTestnet
+     - PolygonAmoy
 
    - Handle API responses:
      - Success: Retrieve the data and get the hash of the credentials from the transaction data.
@@ -94,4 +94,4 @@ The verifier performs detailed verification steps on the package:
 
 ## Package Notes :memo:
 
-Version 1.0.15 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
+Version 1.0.16 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard.
