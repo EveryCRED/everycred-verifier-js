@@ -96,14 +96,16 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
   publicKey = 'publicKey[0].publicKey',
 }
 
-/* The `BLOCKCHAIN_API_LIST` constant is an array of objects that contains information about different
-blockchain APIs. Each object in the array represents a specific blockchain API and includes
-properties such as `id`, `url`, and `apiKey`. */
+/* BLOCKCHAIN_API_LIST contains an array of objects representing various blockchain APIs.
+Each object has an 'id' identifying the blockchain, 'url' indicating the API endpoint, and 'apiKey' for authentication.
+Use these APIs to interact with Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet, Polygon Testnet, and Polygon Amoy.
+Ensure to use the respective API key for authentication purposes. */
 export const BLOCKCHAIN_API_LIST = [
   { id: 'ethereumMainnet', url: 'https://api.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
   { id: 'ethereumSepolia', url: 'https://api-sepolia.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
   { id: 'polygonMainnet', url: 'https://api.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
   { id: 'polygonTestnet', url: 'https://api-testnet.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
+  { id: 'polygonAmoy', url: 'https://rpc-amoy.polygon.technology/' },
 ];
 
 /* The `export enum BASE_API` is defining an enumeration called `BASE_API` that represents different
@@ -117,13 +119,16 @@ export enum BASE_API {
 }
 
 /* The `export enum BASE_NETWORK` is defining an enumeration called `BASE_NETWORK` that represents
-different network types. It assigns string values to each enum member, where `sepolia` is assigned
-the value `'Sepolia'`, `mainnet` is assigned the value `'Mainnet'`, and `testnet` is assigned the
-value `'Testnet'`. */
+different network types. Each enum member is assigned a specific string value, where:
+- `sepolia` is assigned the value `'Sepolia'`
+- `mainnet` is assigned the value `'Mainnet'`
+- `testnet` is assigned the value `'Testnet'`
+- `amoy` is assigned the value `'Amoy'` */
 export enum BASE_NETWORK {
   sepolia = 'Sepolia',
   mainnet = 'Mainnet',
   testnet = 'Testnet',
+  amoy = 'Amoy'
 }
 
 /* The `export enum GENERAL_KEYWORDS` is defining an enumeration called `GENERAL_KEYWORDS` that

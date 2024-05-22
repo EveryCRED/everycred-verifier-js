@@ -3,6 +3,7 @@ import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
 import nacl from 'tweetnacl';
 import naclUtil from 'tweetnacl-util';
+import Web3 from 'web3';
 import {
   ALGORITHM_TYPES,
   APPLICATION_JSON,
@@ -405,8 +406,14 @@ export class MerkleProofValidator2019 {
     const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID);
 
     try {
-      // Fetching data from the API using finalUrl
-      this.blockchainApiResponse = await getDataFromAPI(finalUrl);
+      if (this.networkName === BLOCKCHAIN_API_LIST[4]?.id) {
+        // Fetching data using the RPC URL using WEB3 js
+        const web3 = new Web3(new Web3.providers.HttpProvider(`${matchedAPI.url}`));
+        this.blockchainApiResponse = await web3.eth.getTransaction(transactionID);
+      } else {
+        // Fetching data from the API using finalUrl
+        this.blockchainApiResponse = await getDataFromAPI(finalUrl);
+      }
     } catch (error) {
       this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.TRANSACTION_NOT_FOUND_ERROR);
       return { message: Messages.TRANSACTION_NOT_FOUND_ERROR, status: false };
