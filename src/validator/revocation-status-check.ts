@@ -21,6 +21,7 @@ export class RevocationStatusCheck {
   private credential: any;
   private issuerProfileData: any;
   private revocationListData: any;
+  private offChainVerification: boolean = false;
 
   constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
@@ -37,6 +38,10 @@ export class RevocationStatusCheck {
    * profile. It contains information about the issuer, such as their name, address, and contact
    * details. This data is used to verify the authenticity of the issuer and ensure that the credential
    * being validated is issued by a trusted source.
+   * @param [offChainVerification=false] - The `offChainVerification` parameter in the `validate`
+   * function is a boolean flag that indicates whether the verification process should be performed
+   * off-chain. If `offChainVerification` is set to `true`, it means that the verification process will
+   * be conducted off-chain, while if it is set to `
    * @returns an object with two properties: "message" and "status". The "message" property is a string
    * that represents the result of the revocation status check, and the "status" property is a boolean
    * value indicating whether the revocation status check passed or failed.
@@ -44,8 +49,10 @@ export class RevocationStatusCheck {
   async validate(
     revocationListData: any,
     credentialData: any,
-    issuerProfileData: any
+    issuerProfileData: any,
+    offChainVerification = false
   ): Promise<ResponseMessage> {
+    this.offChainVerification = offChainVerification;
     this.credential = deepCloneData(credentialData);
     this.issuerProfileData = deepCloneData(issuerProfileData);
     this.revocationListData = deepCloneData(revocationListData);
@@ -61,18 +68,31 @@ export class RevocationStatusCheck {
   }
 
   /**
-   * The statusRevocationCheck function checks various revocation-related conditions and returns a
-   * boolean indicating whether all conditions are met.
-   * @returns a Promise that resolves to a boolean value.
+   * The `statusRevocationCheck` function asynchronously checks for revocation status and validity dates,
+   * prioritizing online status.
+   * @returns The `statusRevocationCheck` method returns a boolean value.
    */
   private async statusRevocationCheck(): Promise<boolean> {
-    return ((await this.checkRevocationContext()).status &&
+    if (!navigator.onLine) {
+      this.progressCallback(Stages.revocationStatusCheck, Messages.OFFLINE_STATUS_CHECK, true, Messages.SKIP_REVOCATION_STATUS_CHECK);
+      return await this.checkValidityDates();
+    }
+
+    return (await this.completeRevocationChecks()) &&
+      (await this.checkValidityDates());
+  }
+
+  private async checkValidityDates(): Promise<boolean> {
+    return (await this.checkValidFromDate()).status &&
+      (await this.checkValidUntilDate()).status;
+  }
+
+  private async completeRevocationChecks(): Promise<boolean> {
+    return (await this.checkRevocationContext()).status &&
       this.checkRevocationType().status &&
       this.checkRevocationID().status &&
       (await this.checkRevocationIssuer()).status &&
-      this.checkRevocationRevokedAssertions().status &&
-      (await this.checkValidFromDate()).status &&
-      (await this.checkValidUntilDate()).status);
+      this.checkRevocationRevokedAssertions().status;
   }
 
   /**
@@ -82,7 +102,7 @@ export class RevocationStatusCheck {
    * string value, and the "status" property contains a boolean value.
    */
   private async checkRevocationContext(): Promise<ResponseMessage> {
-    await sleep(250);
+    await this.sleep(250);
 
     if (
       isKeyPresent(
@@ -158,7 +178,7 @@ export class RevocationStatusCheck {
    * string message, and the "status" property contains a boolean value.
    */
   private async checkRevocationIssuer(): Promise<ResponseMessage> {
-    await sleep(350);
+    await this.sleep(350);
 
     if (isKeyPresent(this.credential, REVOCATION_STATUS_CHECK_KEYS.issuer)) {
       let issuerData = getDataFromKey(
@@ -223,7 +243,7 @@ export class RevocationStatusCheck {
    * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async checkValidFromDate(): Promise<ResponseMessage> {
-    await sleep(400);
+    await this.sleep(400);
 
     if (
       isKeyPresent(
@@ -257,7 +277,7 @@ export class RevocationStatusCheck {
    * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async checkValidUntilDate(): Promise<ResponseMessage> {
-    await sleep(400);
+    await this.sleep(400);
 
     if (
       isKeyPresent(
@@ -285,4 +305,15 @@ export class RevocationStatusCheck {
     return { message: Messages.VALID_UNTIL_DATE_KEY_SUCCESS, status: true };
   }
 
+  /**
+   * The private async sleep function delays execution for a specified number of milliseconds unless
+   * offChainVerification is false.
+   * @param {number} milliseconds - The `milliseconds` parameter in the `sleep` function represents the
+   * duration in milliseconds for which the function should pause execution before continuing.
+   */
+  private async sleep(milliseconds: number) {
+    if (!this.offChainVerification) {
+      await sleep(milliseconds);
+    }
+  }
 }
