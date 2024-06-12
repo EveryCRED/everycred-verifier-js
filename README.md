@@ -13,38 +13,6 @@ You can install the library using npm:
 ```shell
 npm i @viitorcloudtechnologies/everycred-verifier-js
 ```
-
-## Usage  :hammer_and_wrench:
-
-```typescript
-import { EveryCredVerifier } from '@viitorcloudtechnologies/everycred-verifier-js';
-
-// Define a progress callback function to receive updates
-const progressCallback = (step: string, title: string, status: boolean, reason: string) => {
-    console.log(`Step: ${step}, Title: ${title}, Status: ${status}, Reason: ${reason}`);
-};
-
-// Create a certificate object for verification
-const certificate = {
-    // Define your certificate properties here
-};
-
-// Create an instance of EveryCredVerifier
-const verifier = new EveryCredVerifier(progressCallback);
-
-// Perform on-chain verification
-const verificationResult = await verifier.verify(certificate);
-
-// Handle the verification result
-console.log("Verification message:", verificationResult.message);
-console.log("Verification status:", verificationResult.status);
-console.log("Network name:", verificationResult.networkName);
-```
-
-This code demonstrates how to use the EveryCredVerifier package for on-chain verification. First, a progress callback function is defined to receive updates during the verification process. Then, a certificate object is created with the relevant properties. 
-
-Next, an instance of EveryCredVerifier is created with the progress callback function. The `verify` method is called with the certificate object, triggering the on-chain verification process. Finally, the verification result is handled, displaying the verification message, status, and network name.
-
 ## Verifier Steps :clipboard:
 
 The EveryCRED Verifier JS follows the following steps to validate credentials:
@@ -122,10 +90,53 @@ The verifier performs detailed verification steps on the package:
      - If the ID matches, retrieve the revocation message and indicate that the credential is revoked with the given message.
      - If not matched, consider the credential valid and not revoked.
    - **Expiration (ValidFrom & ValidUntil)** :date:: Validate today's date with the "validFrom" & "validUntil" dates.
+
+## Usage :hammer_and_wrench:
+## On-Chain Verification :chains:
+
+The EveryCRED Verifier JS performs on-chain verification to validate the credentials against the blockchain. This process involves fetching and comparing blockchain data to ensure the credential's integrity and authenticity.
+
+### Steps:
+1. **Blockchain Hash Fetch** :link:: Fetch the blockchain hash of the credential.
+2. **Generate Credential Hash** :1234:: Generate a hash of the credential.
+3. **Checksum Integrity** :heavy_check_mark:: Compare the generated hash with the blockchain hash.
+4. **Revocation Check** :no_entry_sign:: Check if the credential has been revoked.
+5. **Expiration Check** :alarm_clock:: Verify if the credential has expired.
+
+### Usage:
+
+```typescript
+import { EveryCredVerifier } from '@viitorcloudtechnologies/everycred-verifier-js';
+
+// Define a progress callback function to receive updates
+const progressCallback = (step: string, title: string, status: boolean, reason: string) => {
+    console.log(`Step: ${step}, Title: ${title}, Status: ${status}, Reason: ${reason}`);
+};
+
+// Create a certificate object for verification
+const certificate = {
+    // Define your certificate properties here
+};
+
+// Create an instance of EveryCredVerifier
+const verifier = new EveryCredVerifier(progressCallback);
+
+// Perform on-chain verification
+const verificationResult = await verifier.verify(certificate);
+
+// Handle the verification result
+console.log("Verification message:", verificationResult.message);
+console.log("Verification status:", verificationResult.status);
+console.log("Network name:", verificationResult.networkName);
+```
+This code demonstrates how to use the EveryCredVerifier package for on-chain verification. First, a progress callback function is defined to receive updates during the verification process. Then, a certificate object is created with the relevant properties. 
+
+Next, an instance of EveryCredVerifier is created with the progress callback function. The `verify` method is called with the certificate object, triggering the on-chain verification process. Finally, the verification result is handled, displaying the verification message, status, and network name.
    
 ## Off-Chain Verification :unlock:
 The EveryCRED Verifier JS offers off-chain verification capabilities in addition to its on-chain verification functionality. This feature comprises two main components:
 
+### Steps:
 1. **Proof Value Verification** :white_check_mark::
     - Verify the existence and correctness of the proof value within the credential.
     - Ensure that the credential's proof adheres to the expected format and contains all necessary information.
@@ -139,7 +150,7 @@ The EveryCRED Verifier JS offers off-chain verification capabilities in addition
         - Only the expiration dates (valid from and valid until) are verified against the local data.
         - Revocation checking is skipped in offline mode to ensure that the verification process remains lightweight and does not rely on external resources when offline.
 
-## Usage :hammer_and_wrench:
+### Usage:
 ```typescript
 // Create an instance of EveryCredVerifier
 const verifier = new EveryCredVerifier(progressCallback);
