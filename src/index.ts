@@ -1,7 +1,8 @@
 import { MerkleProofValidator2019 } from './checksum/merkle-proof-2019-validation';
+import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS } from './constants/common';
 import { Messages } from './constants/messages';
 import { Stages } from './constants/stages';
-import { deepCloneData, getDataFromKey } from "./utils/credential-util";
+import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from "./utils/credential-util";
 import { sleep } from './utils/sleep';
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
 import { CredentialValidator } from "./validator/credential-validator";
@@ -16,6 +17,7 @@ export class EveryCredVerifier {
   private credentialIssuerValidation: boolean = false;
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
+  private offChainVerification: boolean = false;
 
   constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
@@ -25,29 +27,67 @@ export class EveryCredVerifier {
    * successful or not.
    * @param {any} certificate - The `certificate` parameter is an object that represents a certificate.
    * It is passed to the `verify` function for validation.
+   * @param [offChainVerification=false] - The `offChainVerification` parameter is a boolean flag that
+   * determines whether the verification process should be done off-chain or on-chain. If
+   * `offChainVerification` is set to `true`, the `verify` method will call the `offChainVerify` method.
    * @returns The function `verify` returns an object with the properties `message`, `status`, and
    * `networkName`. The values of these properties depend on the outcome of the validation process. If
    * all validations pass, the `message` property will be set to `Messages.VERIFIED`, the `status`
    * property will be set to `true`, and the `networkName` property will be set to the
    */
-  async verify(certificate: any) {
+  async verify(certificate: any, offChainVerification = false) {
+    this.offChainVerification = offChainVerification
     this.certificate = deepCloneData(certificate);
-    this.credentialValidation = await this.validateCredentials();
 
+    if (this.offChainVerification) {
+      return await this.offChainVerify();
+    } else {
+      return await this.onChainVerify();
+    }
+  };
+
+  /**
+   * The function `offChainVerify` asynchronously validates checksum and revocation status, returning a
+   * success message if both validations pass.
+   * @returns The `offChainVerify` method returns an object with the following properties:
+   * - `message`: Either "VERIFICATION_SUCCESS" or "VERIFICATION_FAILED" based on the validation results.
+   * - `status`: Either `true` or `false` based on the validation results.
+   * - `networkName`: The value of the `networkName` property in the current object.
+   */
+  private async offChainVerify() {
+    this.isChecksumValidated = await this.validateChecksum();
+    if (this.isChecksumValidated) {
+      this.revocationStatusValidation = await this.revocationStatusCheck();
+      if (this.revocationStatusValidation) {
+        return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
+      }
+    }
+    return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
+  }
+
+  /**
+   * The function "onChainVerify" asynchronously validates credentials, checksum, and revocation status,
+   * returning a success message if all validations pass.
+   * @returns The `onChainVerify` method returns an object with the following properties:
+   * - `message`: A message indicating the verification status (either `Messages.VERIFICATION_SUCCESS` or
+   * `Messages.VERIFICATION_FAILED`).
+   * - `status`: A boolean value indicating the overall verification status (true for success, false for
+   * failure).
+   * - `networkName`: The name of the network being verified on.
+   */
+  private async onChainVerify() {
+    this.credentialValidation = await this.validateCredentials();
     if (this.credentialValidation) {
       this.isChecksumValidated = await this.validateChecksum();
-
       if (this.isChecksumValidated) {
         this.revocationStatusValidation = await this.revocationStatusCheck();
-
         if (this.revocationStatusValidation) {
           return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
         }
       }
     }
-
     return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
-  };
+  }
 
   /**
    * The function `validateCredentials` is an asynchronous function that validates credentials and
@@ -83,9 +123,11 @@ export class EveryCredVerifier {
    * @returns a Promise<boolean>.
    */
   private async validateChecksum(): Promise<boolean> {
-    await sleep(500);
+    if (!this.offChainVerification) {
+      await sleep(500);
+    }
 
-    const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate);
+    const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate, this.offChainVerification);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
 
@@ -93,20 +135,54 @@ export class EveryCredVerifier {
   }
 
   /**
-   * The function `revocationStatusCheck` is an asynchronous function that performs a revocation status
-   * check and returns a boolean indicating the validation status.
-   * @returns a boolean value, which is the value of the variable `this.revocationStatusValidation`.
+   * This TypeScript function checks the revocation status by fetching issuer and revocation data and
+   * performing validation.
+   * @returns The `revocationStatusCheck` method returns a Promise that resolves to a boolean value,
+   * specifically the `revocationStatusValidation` property.
    */
   private async revocationStatusCheck(): Promise<boolean> {
-    await sleep(750);
+    if (this.offChainVerification && navigator.onLine) {
+      await this.fetchIssuerAndRevocationData();
+    } else if (!this.offChainVerification) {
+      await sleep(750);
+    }
 
-    this.revocationStatusValidation = (await new RevocationStatusCheck(this.progressCallback).validate(
-      this.revocationListData,
-      this.certificate,
-      this.issuerProfileData
-    )).status;
-
+    this.revocationStatusValidation = await this.performRevocationStatusValidation();
     return this.revocationStatusValidation;
   }
 
+  /**
+   * The function fetches issuer and revocation data from specified URLs if the necessary keys are
+   * present in the certificate and issuer profile data.
+   */
+  private async fetchIssuerAndRevocationData(): Promise<void> {
+    if (isKeyPresent(this.certificate, CREDENTIALS_VALIDATORS_KEYS.issuer)) {
+      const issuerDataUrl = getDataFromKey(this.certificate, CREDENTIALS_VALIDATORS_KEYS.issuer).profile;
+      if (issuerDataUrl) {
+        this.issuerProfileData = await getDataFromAPI(issuerDataUrl);
+        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList)) {
+          const revocationListUrl = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList);
+          if (revocationListUrl) {
+            this.revocationListData = await getDataFromAPI(revocationListUrl);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * The function `performRevocationStatusValidation` asynchronously validates the revocation status of a
+   * certificate using various data inputs.
+   * @returns The `performRevocationStatusValidation` method is returning a boolean value, specifically
+   * the `status` property of the `validationResponse` object.
+   */
+  private async performRevocationStatusValidation(): Promise<boolean> {
+    const validationResponse = await new RevocationStatusCheck(this.progressCallback).validate(
+      this.revocationListData,
+      this.certificate,
+      this.issuerProfileData,
+      this.offChainVerification
+    );
+    return validationResponse.status;
+  }
 }

@@ -51,24 +51,25 @@ export class MerkleProofValidator2019 {
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
-  async validate(credentialData: any): Promise<NetworkResponseStatus> {
+  async validate(credentialData: any, offChainVerification: boolean): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
     if (isObjectEmpty(this.decodedData)) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, false, '');
     }
 
-    const checks = await Promise.all([
-      this.checkDecodedAnchors(),
-      this.checkDecodedPath(),
-      this.checkDecodedMerkleRoot(),
-      this.checkDecodedTargetHash(),
-      this.fetchDataFromBlockchainAPI(),
-      this.verifyMerkleRootHash()
-    ]);
-
-    if (!checks.every(check => check.status)) {
-      return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+    if (!offChainVerification) {
+      const checks = await Promise.all([
+        this.checkDecodedAnchors(),
+        this.checkDecodedPath(),
+        this.checkDecodedMerkleRoot(),
+        this.checkDecodedTargetHash(),
+        this.fetchDataFromBlockchainAPI(),
+        this.verifyMerkleRootHash()
+      ]);
+      if (!checks.every(check => check.status)) {
+        return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+      }
     }
 
     let verificationStatus = false;

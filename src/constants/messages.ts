@@ -80,6 +80,9 @@ export enum Messages {
 
   REVOCATION_STATUS_VALIDATION = 'Revocation status validation',
 
+  OFFLINE_STATUS_CHECK = "Offline status check",
+  SKIP_REVOCATION_STATUS_CHECK = "Skip revocation status check",
+
   CONTEXT_REVOCATION_LIST_KEY_VALIDATE = "Validate revocation list @context",
   CONTEXT_REVOCATION_LIST_KEY_SUCCESS = "@context key is present in the revocation list with valid data.",
   CONTEXT_REVOCATION_LIST_KEY_ERROR = "@context key is not present or having invalid data in the revocation list.",
