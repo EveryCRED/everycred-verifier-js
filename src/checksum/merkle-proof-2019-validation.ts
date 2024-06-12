@@ -117,7 +117,6 @@ export class MerkleProofValidator2019 {
    * following properties:
    */
   private async verifyEd25519(): Promise<NetworkResponseStatus> {
-    // offchain verification
     try {
       const dataToVerify = { ...this.credential };
       delete dataToVerify.proof;
