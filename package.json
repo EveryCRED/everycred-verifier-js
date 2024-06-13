@@ -9,6 +9,11 @@
     "W3C",
     "verifiable credentials"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EveryCRED/everycred-verifier-js.git"
+  },
+  "homepage": "https://everycred.com",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
