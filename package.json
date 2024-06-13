@@ -1,6 +1,6 @@
 {
   "name": "@viitorcloudtechnologies/everycred-verifier-js",
-  "version": "1.0.17",
+  "version": "1.1.0",
   "description": "EveryCRED custom verifier to verify EveryCRED W3C verifiable credentials.",
   "keywords": [
     "credentials",
@@ -9,6 +9,11 @@
     "W3C",
     "verifiable credentials"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EveryCRED/everycred-verifier-js.git"
+  },
+  "homepage": "https://everycred.com",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

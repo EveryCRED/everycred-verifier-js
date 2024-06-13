@@ -4,7 +4,7 @@
 
 Version: 1.1.0 :bookmark_tabs:
 
-EveryCRED Verifier JS is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
+[EveryCRED Verifier JS](https://www.npmjs.com/package/@viitorcloudtechnologies/everycred-verifier-js) is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
 ## Installation
 
