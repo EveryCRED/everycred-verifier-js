@@ -298,11 +298,13 @@ export class CredentialIssuerValidator {
    */
   private async validateRevocationListFromIssuerProfile(): Promise<ProcessStepStatus> {
     if (this.issuerProfileData) {
+      const revocationList = getDataFromKey(
+        this.issuerProfileData,
+        CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
+      ) + `?v=${new Date().getTime()}`;
+
       this.revocationListData = await getDataFromAPI(
-        getDataFromKey(
-          this.issuerProfileData,
-          CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
-        )
+        revocationList
       );
       if (this.revocationListData) {
         this.progressCallback(Stages.validateRevocationListFromIssuerProfile, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, true, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS);
