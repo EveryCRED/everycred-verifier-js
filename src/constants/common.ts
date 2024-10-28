@@ -94,6 +94,7 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
   targetHash = 'targetHash',
   proofValue = 'proofValue',
   publicKey = 'publicKey[0].publicKey',
+  verificationMethod = 'verificationMethod'
 }
 
 /* BLOCKCHAIN_API_LIST contains an array of objects representing various blockchain APIs.

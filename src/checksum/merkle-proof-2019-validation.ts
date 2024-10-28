@@ -29,7 +29,6 @@ import {
   isObjectEmpty
 } from '../utils/credential-util';
 import { logger } from '../utils/logger';
-import { sleep } from '../utils/sleep';
 import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/url.config';
 
 export class MerkleProofValidator2019 {
@@ -125,8 +124,11 @@ export class MerkleProofValidator2019 {
       const dataString = JSON.stringify(dataToVerify);
       const messageUint8 = naclUtil.decodeUTF8(dataString);
       const signature = naclUtil.decodeBase64(this.credential?.proof?.proofValue);
-      const credentialSubject = await getDataFromAPI(this.credential?.credentialSubject?.profile);
-      const pubKey = naclUtil.decodeBase64(credentialSubject?.publicKey[0]?.publicKey);
+      const publicKey = getDataFromKey(
+        this.credential?.proof,
+        CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
+      )?.split('#')[1];
+      const pubKey = naclUtil.decodeBase64(publicKey);
 
       // Verify the signature
       const isValid = nacl.sign.detached.verify(messageUint8, signature, pubKey);
@@ -243,8 +245,6 @@ export class MerkleProofValidator2019 {
    * and the "status" property is a boolean.
    */
   private async checkDecodedAnchors(): Promise<ResponseMessage> {
-    await sleep(250);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -275,8 +275,6 @@ export class MerkleProofValidator2019 {
    * met, otherwise it is set to false.
    */
   private async checkDecodedPath(): Promise<ResponseMessage> {
-    await sleep(500);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -298,8 +296,6 @@ export class MerkleProofValidator2019 {
    * "message" property is a string and the "status" property is a boolean.
    */
   private async checkDecodedMerkleRoot(): Promise<ResponseMessage> {
-    await sleep(750);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -327,8 +323,6 @@ export class MerkleProofValidator2019 {
    * and the "status" property is a boolean.
    */
   private async checkDecodedTargetHash(): Promise<ResponseMessage> {
-    await sleep(1000);
-
     if (
       isKeyPresent(
         this.decodedData,

@@ -34,7 +34,7 @@
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
     "typescript": "^5.1.6",
-    "web3": "^4.8.0"
+    "web3": "^4.14.0"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.1.2",
