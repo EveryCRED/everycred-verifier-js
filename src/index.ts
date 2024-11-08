@@ -3,7 +3,6 @@ import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS } from 
 import { Messages } from './constants/messages';
 import { Stages } from './constants/stages';
 import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from "./utils/credential-util";
-import { sleep } from './utils/sleep';
 import { CredentialIssuerValidator } from "./validator/credential-issuer-validator";
 import { CredentialValidator } from "./validator/credential-validator";
 import { RevocationStatusCheck } from './validator/revocation-status-check';
@@ -19,7 +18,7 @@ export class EveryCredVerifier {
   private networkName: string = '';
   private offChainVerification: boolean = false;
 
-  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+  constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function verifies a certificate by performing credential validation, checksum validation, and
@@ -36,7 +35,7 @@ export class EveryCredVerifier {
    * property will be set to `true`, and the `networkName` property will be set to the
    */
   async verify(certificate: any, offChainVerification = false) {
-    this.offChainVerification = offChainVerification
+    this.offChainVerification = offChainVerification;
     this.certificate = deepCloneData(certificate);
 
     if (this.offChainVerification) {
@@ -95,8 +94,6 @@ export class EveryCredVerifier {
    * @returns a Promise<boolean>.
    */
   private async validateCredentials(): Promise<boolean> {
-    await sleep(150);
-
     const credentialValidator = new CredentialValidator(this.progressCallback);
     const result = await credentialValidator.validate(this.certificate);
 
@@ -123,10 +120,6 @@ export class EveryCredVerifier {
    * @returns a Promise<boolean>.
    */
   private async validateChecksum(): Promise<boolean> {
-    if (!this.offChainVerification) {
-      await sleep(500);
-    }
-
     const validate = await new MerkleProofValidator2019(this.progressCallback).validate(this.certificate, this.offChainVerification);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
@@ -143,8 +136,6 @@ export class EveryCredVerifier {
   private async revocationStatusCheck(): Promise<boolean> {
     if (this.offChainVerification && navigator.onLine) {
       await this.fetchIssuerAndRevocationData();
-    } else if (!this.offChainVerification) {
-      await sleep(750);
     }
 
     this.revocationStatusValidation = await this.performRevocationStatusValidation();
@@ -181,7 +172,6 @@ export class EveryCredVerifier {
       this.revocationListData,
       this.certificate,
       this.issuerProfileData,
-      this.offChainVerification
     );
     return validationResponse.status;
   }

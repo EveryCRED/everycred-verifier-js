@@ -10,21 +10,21 @@ export const CREDENTIALS_CONSTANTS = {
     'EveryCREDCredential'
   ],
   context_values: [
+    'https://w3id.org/everycred/v1',
     'https://www.w3.org/2018/credentials/v1',
-    'https://www.w3.org/2018/credentials/v2',
-    'https://w3id.org/blockcerts/schema/3.0/context.json',
-    'https://w3id.org/everycred/v1'
+    'https://www.w3.org/ns/credentials/v2',
   ],
   credentialSubjectRequiredKeys: ['id', 'profile'],
   issuerRequiredKeys: ['id', 'profile'],
   proofRequiredKeys: [
     'type',
+    'cryptosuite',
     'created',
     'proofPurpose',
     'proofValue',
     'verificationMethod',
   ],
-  proofTypeSupported: ['MerkleProof2019', 'Ed25519Signature2020'],
+  proofTypeSupported: ['Ed25519Signature2020'],
   issuer_profile_context_values: [
     'https://www.w3.org/2018/credentials/v1',
     'https://www.w3.org/2018/credentials/v2',
