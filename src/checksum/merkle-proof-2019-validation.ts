@@ -6,16 +6,13 @@ import naclUtil from 'tweetnacl-util';
 import Web3 from 'web3';
 import {
   ALGORITHM_TYPES,
-  APPLICATION_JSON,
   BASE_API,
   BASE_NETWORK,
   BLOCKCHAIN_API_LIST,
   BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
-  GENERAL_KEYWORDS,
-  HTTP_METHODS,
-  MERKLE_TREE,
-  REQUEST_BODY
+  CREDENTIALS_VALIDATORS_KEYS,
+  GENERAL_KEYWORDS
 } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
@@ -29,8 +26,6 @@ import {
   isObjectEmpty
 } from '../utils/credential-util';
 import { logger } from '../utils/logger';
-import { sleep } from '../utils/sleep';
-import { MERKLE_TREE_VALIDATION_API_URL } from '../utils/url.config';
 
 export class MerkleProofValidator2019 {
   private credential: any;
@@ -73,8 +68,11 @@ export class MerkleProofValidator2019 {
     }
 
     let verificationStatus = false;
+    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
+    const isV2Context = contextData.some(str => str.endsWith("v2"));
+    const proofKey = isV2Context ? "cryptosuite" : "type";
 
-    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
+    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
       verificationStatus = (await this.verifyEd25519()).status;
     } else {
       verificationStatus = (await this.verifyMerkleProof()).status;
@@ -125,8 +123,11 @@ export class MerkleProofValidator2019 {
       const dataString = JSON.stringify(dataToVerify);
       const messageUint8 = naclUtil.decodeUTF8(dataString);
       const signature = naclUtil.decodeBase64(this.credential?.proof?.proofValue);
-      const credentialSubject = await getDataFromAPI(this.credential?.credentialSubject?.profile);
-      const pubKey = naclUtil.decodeBase64(credentialSubject?.publicKey[0]?.publicKey);
+      const publicKey = getDataFromKey(
+        this.credential?.proof,
+        CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
+      )?.split('#')[1];
+      const pubKey = naclUtil.decodeBase64(publicKey);
 
       // Verify the signature
       const isValid = nacl.sign.detached.verify(messageUint8, signature, pubKey);
@@ -151,15 +152,13 @@ export class MerkleProofValidator2019 {
    */
   private async getData(credentialData: any): Promise<void> {
     this.credential = deepCloneData(credentialData);
+    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
 
-    if (this.credential?.proof?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(this.credential?.proof?.merkleProof).length) {
+    const isV2Context = contextData.some(str => str.endsWith("v2"));
+    const proofKey = isV2Context ? "cryptosuite" : "type";
+
+    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(this.credential?.proof?.merkleProof || {}).length) {
       this.normalizedDecodedData = await this.getNormalizedData();
-      this.decodedData = getDataFromKey(
-        this.normalizedDecodedData,
-        CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
-      );
-    } else if (this.credential?.proof?.type === ALGORITHM_TYPES.MERKLEPROOF) {
-      this.normalizedDecodedData = await this.getNormalizedDecodedData(ALGORITHM_TYPES.MERKLEPROOF);
       this.decodedData = getDataFromKey(
         this.normalizedDecodedData,
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value
@@ -185,66 +184,12 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The function `getNormalizedDecodedData` sends a POST request to an API with a JSON payload,
-   * retrieves the response, validates it, and returns the response if it is valid.
-   * @returns a Promise that resolves to an object of type `any`.
-   */
-  private async getNormalizedDecodedData(algorithm: string): Promise<any> {
-    const apiUrl = `${MERKLE_TREE_VALIDATION_API_URL}${MERKLE_TREE.validation_api}${MERKLE_TREE.data_type}${MERKLE_TREE.algorithm}${algorithm}`;
-    const formData = new FormData();
-    const blob = new Blob([JSON.stringify(this.credential)], { type: APPLICATION_JSON });
-    formData.append(REQUEST_BODY, blob);
-
-    const options = {
-      method: HTTP_METHODS.POST,
-      headers: {
-        Accept: APPLICATION_JSON,
-      },
-      body: formData,
-    };
-
-    try {
-      const apiResponse = (await getDataFromAPI(apiUrl, options))?.data;
-      const isValidResponse = this.validateNormalizedDecodedData(apiResponse).status;
-
-      if (isValidResponse) {
-        return apiResponse;
-      }
-    } catch (error) {
-      this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
-      return {};
-    }
-  }
-
-  /**
- * The function validates the normalized decoded data and returns a status and message.
- * @param {any} response - The `response` parameter is an object that contains data received from an
- * API or some other source.
- * @returns an object with two properties: "message" and "status". The "message" property contains a
- * string value, and the "status" property contains a boolean value.
- */
-  private validateNormalizedDecodedData(response: unknown): ResponseMessage {
-    if (
-      !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.decoded_proof_value) &&
-      !isKeyPresent(response, CHECKSUM_MERKLEPROOF_CHECK_KEYS.get_byte_array_to_issue)
-    ) {
-      this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, false, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR);
-      return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, status: false };
-    }
-
-    this.progressCallback(Stages.getNormalizedDecodedData, Messages.FETCHING_NORMALIZED_DECODED_DATA, true, Messages.FETCHING_NORMALIZED_DECODED_DATA_SUCCESS);
-    return { message: Messages.FETCHING_NORMALIZED_DECODED_DATA_SUCCESS, status: true };
-  }
-
-  /**
    * The function checks if the decoded anchors data is present and returns a status and message
    * accordingly.
    * @returns an object with two properties: "message" and "status". The "message" property is a string
    * and the "status" property is a boolean.
    */
   private async checkDecodedAnchors(): Promise<ResponseMessage> {
-    await sleep(250);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -275,8 +220,6 @@ export class MerkleProofValidator2019 {
    * met, otherwise it is set to false.
    */
   private async checkDecodedPath(): Promise<ResponseMessage> {
-    await sleep(500);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -298,8 +241,6 @@ export class MerkleProofValidator2019 {
    * "message" property is a string and the "status" property is a boolean.
    */
   private async checkDecodedMerkleRoot(): Promise<ResponseMessage> {
-    await sleep(750);
-
     if (
       isKeyPresent(
         this.decodedData,
@@ -327,8 +268,6 @@ export class MerkleProofValidator2019 {
    * and the "status" property is a boolean.
    */
   private async checkDecodedTargetHash(): Promise<ResponseMessage> {
-    await sleep(1000);
-
     if (
       isKeyPresent(
         this.decodedData,

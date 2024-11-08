@@ -15,44 +15,40 @@ import {
   isFutureDate,
   isKeyPresent
 } from "../utils/credential-util";
-import { sleep } from '../utils/sleep';
 
 export class RevocationStatusCheck {
   private credential: any;
   private issuerProfileData: any;
   private revocationListData: any;
-  private offChainVerification: boolean = false;
 
-  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+  constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
-  /**
-   * The function `validate` takes in three parameters, performs some data cloning operations, and then
-   * checks the revocation status before returning a result object.
-   * @param {any} revocationListData - The `revocationListData` parameter is the data of the revocation
-   * list. It contains information about revoked credentials, such as the credential ID and the
-   * revocation status.
-   * @param {any} credentialData - The `credentialData` parameter is the data of the credential that
-   * needs to be validated. It contains information such as the issuer, subject, and any additional
-   * attributes or claims associated with the credential.
-   * @param {any} issuerProfileData - The `issuerProfileData` parameter is the data of the issuer
-   * profile. It contains information about the issuer, such as their name, address, and contact
-   * details. This data is used to verify the authenticity of the issuer and ensure that the credential
-   * being validated is issued by a trusted source.
-   * @param [offChainVerification=false] - The `offChainVerification` parameter in the `validate`
-   * function is a boolean flag that indicates whether the verification process should be performed
-   * off-chain. If `offChainVerification` is set to `true`, it means that the verification process will
-   * be conducted off-chain, while if it is set to `
-   * @returns an object with two properties: "message" and "status". The "message" property is a string
-   * that represents the result of the revocation status check, and the "status" property is a boolean
-   * value indicating whether the revocation status check passed or failed.
-   */
+
+/**
+ * The function `validate` performs revocation status check on a credential and returns the result
+ * along with a message.
+ * @param {any} revocationListData - The `revocationListData` parameter likely contains information
+ * about revoked credentials or certificates. This data is used to check if the credential being
+ * validated has been revoked or is still valid. The `validate` function you provided seems to be
+ * performing a revocation status check on a credential using this data along with
+ * @param {any} credentialData - The `credentialData` parameter in the `validate` function likely
+ * contains information about the credential being validated. This data could include details such as
+ * the credential type, issuer, issue date, expiration date, and any other relevant information related
+ * to the credential.
+ * @param {any} issuerProfileData - The `issuerProfileData` parameter in the `validate` function likely
+ * contains data related to the issuer of the credential. This data could include information such as
+ * the issuer's name, contact details, public key, or any other relevant information needed for
+ * validating the credential.
+ * @returns The `validate` function returns a Promise that resolves to a `ResponseMessage` object. The
+ * `ResponseMessage` object contains a `message` property with the reason for the revocation status
+ * check (either success or failure) and a `status` property indicating whether the revocation status
+ * check was successful (true) or failed (false).
+ */
   async validate(
     revocationListData: any,
     credentialData: any,
     issuerProfileData: any,
-    offChainVerification = false
   ): Promise<ResponseMessage> {
-    this.offChainVerification = offChainVerification;
     this.credential = deepCloneData(credentialData);
     this.issuerProfileData = deepCloneData(issuerProfileData);
     this.revocationListData = deepCloneData(revocationListData);
@@ -102,8 +98,6 @@ export class RevocationStatusCheck {
    * string value, and the "status" property contains a boolean value.
    */
   private async checkRevocationContext(): Promise<ResponseMessage> {
-    await this.sleep(250);
-
     if (
       isKeyPresent(
         this.revocationListData,
@@ -178,8 +172,6 @@ export class RevocationStatusCheck {
    * string message, and the "status" property contains a boolean value.
    */
   private async checkRevocationIssuer(): Promise<ResponseMessage> {
-    await this.sleep(350);
-
     if (isKeyPresent(this.credential, REVOCATION_STATUS_CHECK_KEYS.issuer)) {
       let issuerData = getDataFromKey(
         this.revocationListData,
@@ -243,8 +235,6 @@ export class RevocationStatusCheck {
    * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async checkValidFromDate(): Promise<ResponseMessage> {
-    await this.sleep(400);
-
     if (
       isKeyPresent(
         this.credential,
@@ -277,8 +267,6 @@ export class RevocationStatusCheck {
    * @returns a Promise that resolves to an object with two properties: "message" and "status".
    */
   private async checkValidUntilDate(): Promise<ResponseMessage> {
-    await this.sleep(400);
-
     if (
       isKeyPresent(
         this.credential,
@@ -303,17 +291,5 @@ export class RevocationStatusCheck {
 
     this.progressCallback(Stages.checkValidUntilDate, Messages.VALID_UNTIL_DATE_KEY_VALIDATE, true, Messages.VALID_UNTIL_DATE_KEY_SUCCESS);
     return { message: Messages.VALID_UNTIL_DATE_KEY_SUCCESS, status: true };
-  }
-
-  /**
-   * The private async sleep function delays execution for a specified number of milliseconds unless
-   * offChainVerification is false.
-   * @param {number} milliseconds - The `milliseconds` parameter in the `sleep` function represents the
-   * duration in milliseconds for which the function should pause execution before continuing.
-   */
-  private async sleep(milliseconds: number) {
-    if (!this.offChainVerification) {
-      await sleep(milliseconds);
-    }
   }
 }

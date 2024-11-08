@@ -193,40 +193,59 @@ export class CredentialValidator {
    * @returns a Promise<boolean>.
    */
   private async validateCredentialProof(): Promise<ProcessStepStatus> {
-    if (isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
-      let proofData = getDataFromKey(
-        this.credential,
-        CREDENTIALS_VALIDATORS_KEYS.proof
-      );
+    if (!isKeyPresent(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof)) {
+      return this.getProofFailureStatus();
+    }
 
-      if (
-        proofData &&
-        CREDENTIALS_CONSTANTS.proofRequiredKeys.every((data) =>
-          Object.keys(proofData).includes(data)
-        )
-      ) {
-        let flag = false;
+    const proofData = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.proof);
 
-        for (const key of CREDENTIALS_CONSTANTS.proofRequiredKeys) {
-          if (!proofData[key]) {
-            flag = true;
-            break;
-          }
-        }
+    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
+    const isV2Context = contextData.some(str => str.endsWith("v2"));
 
-        if (
-          !flag &&
-          CREDENTIALS_CONSTANTS.proofTypeSupported.some(
-            (data) => proofData.type === data
-          )
-        ) {
-          this.progressCallback(Stages.validateCredentialProof, Messages.PROOF_KEY_VALIDATE, true, Messages.PROOF_KEY_SUCCESS);
-          return { step: Stages.validateCredentialProof, title: Messages.PROOF_KEY_VALIDATE, status: true, reason: Messages.PROOF_KEY_SUCCESS };
-        }
-      }
+    if (!proofData || !this.hasRequiredKeys(proofData, isV2Context)) {
+      return this.getProofFailureStatus();
+    }
+
+    const flag = this.hasMissingProofData(proofData, isV2Context);
+    const proofTypeIsValid = this.isProofTypeSupported(proofData, isV2Context);
+
+    if (!flag && proofTypeIsValid) {
+      this.progressCallback(Stages.validateCredentialProof, Messages.PROOF_KEY_VALIDATE, true, Messages.PROOF_KEY_SUCCESS);
+      return this.getProofSuccessStatus();
     }
 
     this.progressCallback(Stages.validateCredentialProof, Messages.PROOF_KEY_VALIDATE, false, Messages.PROOF_KEY_ERROR);
+    return this.getProofFailureStatus();
+  }
+
+  private getFilteredKeysForV2(): string[] {
+    return CREDENTIALS_CONSTANTS.proofRequiredKeys.filter(key => key !== "type");
+  }
+
+  private getFilteredKeysForV1(): string[] {
+    return CREDENTIALS_CONSTANTS.proofRequiredKeys.filter(key => key !== "cryptosuite");
+  }
+
+  private hasRequiredKeys(proofData: any, isV2Context: boolean): boolean {
+    const requiredKeys = isV2Context ? this.getFilteredKeysForV2() : this.getFilteredKeysForV1();
+    return requiredKeys.every(key => key in proofData);
+  }
+
+  private hasMissingProofData(proofData: any, isV2Context: boolean): boolean {
+    const requiredKeys = isV2Context ? this.getFilteredKeysForV2() : this.getFilteredKeysForV1();
+    return requiredKeys.some(key => !proofData[key]);
+  }
+
+  private isProofTypeSupported(proofData: any, isV2Context: boolean): boolean {
+    const proofKey = isV2Context ? "cryptosuite" : "type";
+    return CREDENTIALS_CONSTANTS.proofTypeSupported.some(type => proofData[proofKey] === type);
+  }
+
+  private getProofSuccessStatus(): ProcessStepStatus {
+    return { step: Stages.validateCredentialProof, title: Messages.PROOF_KEY_VALIDATE, status: true, reason: Messages.PROOF_KEY_SUCCESS };
+  }
+
+  private getProofFailureStatus(): ProcessStepStatus {
     return { step: Stages.validateCredentialProof, title: Messages.PROOF_KEY_VALIDATE, status: false, reason: Messages.PROOF_KEY_ERROR };
   }
 
