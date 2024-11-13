@@ -24,26 +24,26 @@ export class RevocationStatusCheck {
   constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
 
-/**
- * The function `validate` performs revocation status check on a credential and returns the result
- * along with a message.
- * @param {any} revocationListData - The `revocationListData` parameter likely contains information
- * about revoked credentials or certificates. This data is used to check if the credential being
- * validated has been revoked or is still valid. The `validate` function you provided seems to be
- * performing a revocation status check on a credential using this data along with
- * @param {any} credentialData - The `credentialData` parameter in the `validate` function likely
- * contains information about the credential being validated. This data could include details such as
- * the credential type, issuer, issue date, expiration date, and any other relevant information related
- * to the credential.
- * @param {any} issuerProfileData - The `issuerProfileData` parameter in the `validate` function likely
- * contains data related to the issuer of the credential. This data could include information such as
- * the issuer's name, contact details, public key, or any other relevant information needed for
- * validating the credential.
- * @returns The `validate` function returns a Promise that resolves to a `ResponseMessage` object. The
- * `ResponseMessage` object contains a `message` property with the reason for the revocation status
- * check (either success or failure) and a `status` property indicating whether the revocation status
- * check was successful (true) or failed (false).
- */
+  /**
+   * The function `validate` performs revocation status check on a credential and returns the result
+   * along with a message.
+   * @param {any} revocationListData - The `revocationListData` parameter likely contains information
+   * about revoked credentials or certificates. This data is used to check if the credential being
+   * validated has been revoked or is still valid. The `validate` function you provided seems to be
+   * performing a revocation status check on a credential using this data along with
+   * @param {any} credentialData - The `credentialData` parameter in the `validate` function likely
+   * contains information about the credential being validated. This data could include details such as
+   * the credential type, issuer, issue date, expiration date, and any other relevant information related
+   * to the credential.
+   * @param {any} issuerProfileData - The `issuerProfileData` parameter in the `validate` function likely
+   * contains data related to the issuer of the credential. This data could include information such as
+   * the issuer's name, contact details, public key, or any other relevant information needed for
+   * validating the credential.
+   * @returns The `validate` function returns a Promise that resolves to a `ResponseMessage` object. The
+   * `ResponseMessage` object contains a `message` property with the reason for the revocation status
+   * check (either success or failure) and a `status` property indicating whether the revocation status
+   * check was successful (true) or failed (false).
+   */
   async validate(
     revocationListData: any,
     credentialData: any,
@@ -103,7 +103,7 @@ export class RevocationStatusCheck {
         this.revocationListData,
         REVOCATION_STATUS_CHECK_KEYS.context
       ) &&
-      CREDENTIALS_CONSTANTS.revocation_list_context_values.some((data) =>
+      CREDENTIALS_CONSTANTS.context_values.some((data) =>
         this.revocationListData[REVOCATION_STATUS_CHECK_KEYS.context].includes(data)
       )
     ) {

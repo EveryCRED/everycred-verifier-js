@@ -108,7 +108,7 @@ export class CredentialIssuerValidator {
         this.issuerProfileData,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.context
       ) &&
-      CREDENTIALS_CONSTANTS.issuer_profile_context_values.some((data) =>
+      CREDENTIALS_CONSTANTS.context_values.some((data) =>
         this.issuerProfileData[
           CREDENTIALS_ISSUER_VALIDATORS_KEYS.context
         ].includes(data)
