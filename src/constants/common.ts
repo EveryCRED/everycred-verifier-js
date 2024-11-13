@@ -25,18 +25,8 @@ export const CREDENTIALS_CONSTANTS = {
     'verificationMethod',
   ],
   proofTypeSupported: ['Ed25519Signature2020'],
-  issuer_profile_context_values: [
-    'https://www.w3.org/2018/credentials/v1',
-    'https://www.w3.org/2018/credentials/v2',
-    'https://w3id.org/openbadges/v2',
-  ],
   issuerProfileTypeSupported: ['Profile'],
   issuerProfilePublicKeyFields: ['id', 'created'],
-  revocation_list_context_values: [
-    'https://www.w3.org/2018/credentials/v1',
-    'https://www.w3.org/2018/credentials/v2',
-    'https://w3id.org/openbadges/v2',
-  ],
   revocation_list_type_supported: 'RevocationList',
 };
 
