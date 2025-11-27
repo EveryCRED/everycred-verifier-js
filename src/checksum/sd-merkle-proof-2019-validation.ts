@@ -12,7 +12,8 @@ import {
   BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
   CREDENTIALS_VALIDATORS_KEYS,
-  GENERAL_KEYWORDS
+  GENERAL_KEYWORDS,
+  SD_CREDENTIAL_VALIDATORS_KEYS
 } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
@@ -27,7 +28,7 @@ import {
 } from '../utils/credential-util';
 import { logger } from '../utils/logger';
 
-export class MerkleProofValidator2019 {
+export class SdMerkleProofValidator2019 {
   private credential: any;
   private decodedData: any;
   private normalizedDecodedData: any;
@@ -49,8 +50,11 @@ export class MerkleProofValidator2019 {
   async validate(credentialData: any, offChainVerification: boolean): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
+    const firstEvidence = Array.isArray(evidenceData) && evidenceData.length > 0 ? evidenceData[0] : null;
+
     // fallback for optional blockchain verification (No blockchain data found)
-    if (!Object.keys(this.credential?.proof?.merkleProof || {}).length) {
+    if (!Object.keys(firstEvidence || {}).length) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_SUCCESS, true, '');
     }
 
@@ -77,7 +81,7 @@ export class MerkleProofValidator2019 {
     const isV2Context = contextData.some(str => str.endsWith("v2"));
     const proofKey = isV2Context ? "cryptosuite" : "type";
 
-    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
+    if (firstEvidence?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
       verificationStatus = (await this.verifyEd25519()).status;
     } else {
       verificationStatus = (await this.verifyMerkleProof()).status;
@@ -122,14 +126,17 @@ export class MerkleProofValidator2019 {
   private async verifyEd25519(): Promise<NetworkResponseStatus> {
     try {
       const dataToVerify = { ...this.credential };
-      delete dataToVerify.proof;
+      delete dataToVerify.evidence;
+
+      const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
+      const firstEvidence = Array.isArray(evidenceData) && evidenceData.length > 0 ? evidenceData[0] : null;
 
       // Convert data object to Uint8Array
       const dataString = JSON.stringify(dataToVerify);
       const messageUint8 = naclUtil.decodeUTF8(dataString);
-      const signature = naclUtil.decodeBase64(this.credential?.proof?.proofValue);
+      const signature = naclUtil.decodeBase64(firstEvidence?.proofValue);
       const publicKey = getDataFromKey(
-        this.credential?.proof,
+        firstEvidence,
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
       )?.split('#')[1];
       const pubKey = naclUtil.decodeBase64(publicKey);
@@ -157,12 +164,9 @@ export class MerkleProofValidator2019 {
    */
   private async getData(credentialData: any): Promise<void> {
     this.credential = deepCloneData(credentialData);
-    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
 
-    const isV2Context = contextData.some(str => str.endsWith("v2"));
-    const proofKey = isV2Context ? "cryptosuite" : "type";
-
-    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(this.credential?.proof?.merkleProof || {}).length) {
+    if (evidenceData?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(evidenceData || {}).length) {
       this.normalizedDecodedData = await this.getNormalizedData();
       this.decodedData = getDataFromKey(
         this.normalizedDecodedData,
@@ -175,17 +179,21 @@ export class MerkleProofValidator2019 {
 
   /**
    * The function `getNormalizedData` returns an object with a stringified version of `this.credential`
-   * and the `merkleProof` value from `this.credential.proof`.
+   * and the `merkleProof` value from `this.credential.evidence[0]`.
    * @returns an object with two properties: "get_byte_array_to_issue" and "decoded_proof_value". The
    * value of "get_byte_array_to_issue" is a stringified JSON representation of the "dataToNormalize"
-   * object, with the "proof" property removed. The value of "decoded_proof_value" is the value of
-   * "this.credential.proof.merkleProof".
+   * object, with the "evidence" property removed. The value of "decoded_proof_value" is the value of
+   * "this.credential.evidence[0].merkleProof".
    */
   private async getNormalizedData() {
     const dataToNormalize = { ...this.credential };
-    delete dataToNormalize.proof;
+    //TODO: Testing remaining for the algorithm validation
+    delete dataToNormalize.evidence;
 
-    return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: this.credential?.proof?.merkleProof };
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
+
+
+    return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: evidenceData };
   }
 
   /**
@@ -347,8 +355,6 @@ export class MerkleProofValidator2019 {
       return { message: Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, status: false };
     }
 
-    // Building the final URL using buildTransactionUrl method
-    const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID);
 
     try {
       if (this.networkName === BLOCKCHAIN_API_LIST[4]?.id) {
@@ -356,6 +362,9 @@ export class MerkleProofValidator2019 {
         const web3 = new Web3(new Web3.providers.HttpProvider(`${matchedAPI.url}`));
         this.blockchainApiResponse = await web3.eth.getTransaction(transactionID);
       } else {
+        // Building the final URL using buildTransactionUrl method
+        const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID, matchedAPI.chainId);
+
         // Fetching data from the API using finalUrl
         this.blockchainApiResponse = await getDataFromAPI(finalUrl);
       }
@@ -451,9 +460,9 @@ export class MerkleProofValidator2019 {
    * of a transaction in the Ethereum blockchain.
    * @returns a string that represents the complete transaction URL.
    */
-  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string): Promise<string> {
+  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string, chainid: number): Promise<string> {
     const endpoint = "api?module=proxy&action=eth_getTransactionByHash";
-    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}`;
+    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}&chainid=${chainid}`;
 
     return `${url}${endpoint}${queryParams}`;
   }

@@ -36,4 +36,13 @@ export enum Stages {
   checkRevocationRevokedAssertions = 'checkRevocationRevokedAssertions',
   checkValidUntilDate = 'checkValidUntilDate',
   checkValidFromDate = 'checkValidFromDate',
+
+  /**
+   * SD Credential Verification Stages
+   */
+  validateSDCredential = 'validateSDCredential',
+  validateSDCredentialFormatAndStructure = 'validateSDCredentialFormatAndStructure',
+  validateSDCredentialJwtToken = 'validateSDCredentialJwtToken',
+  validateSDCredentialEvidence = 'validateSDCredentialEvidence',
+  validateSDCredentialNormalizedJwt = 'validateSDCredentialNormalizedJwt',
 }
