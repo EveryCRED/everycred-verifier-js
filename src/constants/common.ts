@@ -78,6 +78,7 @@ export enum REVOCATION_STATUS_CHECK_KEYS {
 Merkle proof. Each key is assigned a string value that represents a specific property or field
 related to the Merkle proof. */
 export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
+  iat = 'iat',
   decoded_proof_value = 'decoded_proof_value',
   get_byte_array_to_issue = 'get_byte_array_to_issue',
   anchors = 'anchors',
@@ -268,9 +269,9 @@ export const SD_CREDENTIALS_CONSTANTS = {
   revocation_list_type_supported: 'RevocationList',
 };
 
-export const DEFAULT_CONFIG: VerificationConfig = {
+export const DEFAULT_CONFIG: Required<VerificationConfig> = {
   offChainVerification: false,
-  isBlockchainVerificationEnabled: false,
+  isBlockchainVerificationEnabled: true,
   logDiagnosticStep: false,
 };
 

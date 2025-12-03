@@ -1,9 +1,9 @@
 import { SdMerkleProofValidator2019 } from '../checksum/sd-merkle-proof-2019-validation';
-import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, SD_CREDENTIAL_VALIDATORS_KEYS, SDCredentialFormat } from '../constants/common';
+import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, DEFAULT_CONFIG, SD_CREDENTIAL_VALIDATORS_KEYS, SDCredentialFormat } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { SDCredentialInput, VerificationConfig } from '../models/common.model';
-import { getDataFromAPI, getDataFromKey, isKeyPresent } from '../utils/credential-util';
+import { getDataFromAPI, getDataFromKey, hasEvidence, isKeyPresent } from '../utils/credential-util';
 import { logDiagnosticStep } from '../utils/helper';
 import { extractAndNormalizeJwt, parseJwtToken } from '../utils/jwt-utils';
 import { RevocationStatusCheck } from '../validator/revocation-status-check';
@@ -20,30 +20,37 @@ export class JsonWebSignatureVerifier {
   private networkName!: string;
   private issuerProfileData: any = {};
   private revocationListData: any = {};
-  private isBlockchainVerificationEnabled!: boolean;
-  private offChainVerification!: boolean;
-
   private jwtToken: string = '';
   private header: any = {};
   private payload: any = {};
-  private manualParsingMode: boolean = false;
+  private manualParsingMode = false;
   private headerB64: string = '';
   private payloadB64: string = '';
   private signatureB64: string = '';
-
+  private isBlockchainVerificationEnabled = DEFAULT_CONFIG.isBlockchainVerificationEnabled;
+  private readonly offChainVerification = DEFAULT_CONFIG.offChainVerification;
+  private readonly isLogDiagnosticStep = DEFAULT_CONFIG.logDiagnosticStep;
+  
   constructor(
     private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void,
     private readonly config: VerificationConfig = {}
   ) {
     this.isBlockchainVerificationEnabled = this.config?.isBlockchainVerificationEnabled ?? this.isBlockchainVerificationEnabled;
     this.offChainVerification = this.config?.offChainVerification ?? this.offChainVerification;
-    if (this.config?.logDiagnosticStep) {
+    this.isLogDiagnosticStep = this.config?.logDiagnosticStep ?? this.isLogDiagnosticStep;
+    if (this.isLogDiagnosticStep) {
       this.progressCallback = (step: string, title: string, status: boolean, reason: string) => {
         logDiagnosticStep({ step, title, status, reason }, this.credential);
       };
     }
   }
 
+  /**
+   * Validates the format and structure of an SD-JWT credential.
+   * Checks for valid object type, expected format, credential string, disclosures array, issuer, and issued_at fields.
+   * @param sdJwtCredential - The SD-JWT credential object to validate.
+   * @returns True if all validations pass, false otherwise.
+   */
   private validateSDCredentialFormatAndStructure(sdJwtCredential: any): boolean {
     const stage = Stages.validateSDCredentialFormatAndStructure;
     this.sdJwtCredential = sdJwtCredential as SDCredentialInput;
@@ -96,6 +103,12 @@ export class JsonWebSignatureVerifier {
   }
 
 
+  /**
+   * Validates and parses a JWT token string.
+   * Extracts and normalizes the JWT, then parses header, payload, and signature components.
+   * @param jwtToken - The raw JWT token string to validate.
+   * @returns True if the JWT is valid and successfully parsed, false otherwise.
+   */
   private validateJwtToken(jwtToken: string) {
     this.jwtToken = extractAndNormalizeJwt(jwtToken);
 
@@ -132,6 +145,12 @@ export class JsonWebSignatureVerifier {
     return true;
   }
 
+  /**
+   * Main entry point for verifying an SD-JWT credential.
+   * Validates format, structure, and JWT token, then delegates to blockchain or non-blockchain verification flow.
+   * @param sdCredential - The SD-JWT credential input to verify.
+   * @returns A promise resolving to a response message with verification status and network name.
+   */
   async verify(sdCredential: SDCredentialInput) {
     const isFormatAndStructureValid = this.validateSDCredentialFormatAndStructure(sdCredential);
     if (!isFormatAndStructureValid) {
@@ -142,47 +161,19 @@ export class JsonWebSignatureVerifier {
     this.jwtToken = credentialData.credential;
 
     const jwtValidationResult = this.validateJwtToken(this.jwtToken);
-    if (!jwtValidationResult) {
+    if (!jwtValidationResult || !this.payload) {
       return { message: Messages.VALID_SD_CREDENTIAL_JWT_TOKEN_FAILED, status: false, networkName: this.networkName };
     }
 
-    const hasEvidence = this.hasEvidence(this.payload);
-    if (hasEvidence) {
-      this.isBlockchainVerificationEnabled = false;
-    }
+    this.isBlockchainVerificationEnabled = !!hasEvidence(this.payload);
 
-    if (this.isBlockchainVerificationEnabled) {
-      this.credentialValidation = await this.validateCredentials();
-      if (this.credentialValidation) {
-        //TODO: validate checksum is not working as expected so we are keeping it as it is for now
-        this.isChecksumValidated = await this.validateChecksum();
-        if (this.isChecksumValidated) {
-          this.revocationStatusValidation = await this.revocationStatusCheck();
-          if (this.revocationStatusValidation) {
-            const signatureValidationResult = await this.verifySignature();
-            if (signatureValidationResult) {
-              return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
-            }
-          }
-        }
-      }
-    } else {
-      this.credentialValidation = await this.validateCredentials();
-      if (this.credentialValidation) {
-        this.progressCallback(Stages.validateCredentials, Messages.BLOCKCHAIN_VALIDATION_SKIPPED, true, '');
-        this.revocationStatusValidation = await this.revocationStatusCheck();
-        if (this.revocationStatusValidation) {
-          this.signatureValidation = await this.verifySignature();
-          if (this.signatureValidation) {
-            return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
-          }
-        }
-      }
-    }
-    this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, '');
-    return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
+    return this.isBlockchainVerificationEnabled ? await this.withBlockchainVerification() : await this.withoutBlockchainVerification();
   }
 
+  /**
+   * Validates the credential payload using the SD credential validator.
+   * @returns A promise resolving to true if validation passes, false otherwise.
+   */
   private async validateCredentials(): Promise<boolean> {
     const sdCredentialValidator = new SdCredentialValidator(this.progressCallback);
     const result = await sdCredentialValidator.validate(this.credential);
@@ -195,27 +186,69 @@ export class JsonWebSignatureVerifier {
     return false;
   }
 
-  private hasEvidence(credential: any): boolean {
-    return isKeyPresent(credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
+  /**
+   * Performs full verification flow including blockchain checksum validation.
+   * Executes credential validation, checksum validation, revocation status check, and signature verification.
+   * @returns A promise resolving to a response message with verification status and network name.
+   */
+  private async withBlockchainVerification() {
+    this.credentialValidation = await this.validateCredentials();
+    if (this.credentialValidation) {
+      //TODO: validate checksum is not working as expected so we are keeping it as it is for now
+      this.isChecksumValidated = await this.validateChecksum();
+      if (this.isChecksumValidated) {
+        this.revocationStatusValidation = await this.revocationStatusCheck();
+        if (this.revocationStatusValidation) {
+          const signatureValidationResult = await this.verifySignature();
+          if (signatureValidationResult) {
+            return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
+          }
+        }
+      }
+    }
+
+    this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, '');
+    return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
   }
 
   /**
-   * The function `validateChecksum` is a private asynchronous function that validates a checksum using
-   * a MerkleProofValidator2019 and returns a boolean indicating whether the validation was successful.
-   * @returns a Promise<boolean>.
+   * Performs verification flow without blockchain checksum validation.
+   * Executes credential validation, revocation status check, and signature verification.
+   * @returns A promise resolving to a response message with verification status and network name.
+   */
+  private async withoutBlockchainVerification() {
+    this.credentialValidation = await this.validateCredentials();
+    if (this.credentialValidation) {
+      this.progressCallback(Stages.validateCredentials, Messages.BLOCKCHAIN_VALIDATION_SKIPPED, true, '');
+      this.revocationStatusValidation = await this.revocationStatusCheck();
+      if (this.revocationStatusValidation) {
+        this.signatureValidation = await this.verifySignature();
+        if (this.signatureValidation) {
+          return { message: Messages.VERIFICATION_SUCCESS, status: true, networkName: this.networkName };
+        }
+      }
+    }
+    
+    this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, '');
+    return { message: Messages.VERIFICATION_FAILED, status: false, networkName: this.networkName };
+  }
+
+  /**
+   * Validates the credential checksum using Merkle proof validation.
+   * Uses SdMerkleProofValidator2019 to verify the credential integrity on blockchain.
+   * @returns A promise resolving to true if checksum validation passes, false otherwise.
    */
   private async validateChecksum(): Promise<boolean> {
-    const validate = await new SdMerkleProofValidator2019(this.progressCallback).validate(this.credential, false);
+    const validate = await new SdMerkleProofValidator2019(this.progressCallback).validate(this.credential);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
     return this.isChecksumValidated;
   }
 
   /**
-   * This TypeScript function checks the revocation status by fetching issuer and revocation data and
-   * performing validation.
-   * @returns The `revocationStatusCheck` method returns a Promise that resolves to a boolean value,
-   * specifically the `revocationStatusValidation` property.
+   * Checks the revocation status of the credential.
+   * Fetches issuer and revocation data if online and not in off-chain mode, then performs validation.
+   * @returns A promise resolving to true if credential is not revoked, false otherwise.
    */
   private async revocationStatusCheck(): Promise<boolean> {
     if (!this.offChainVerification && navigator.onLine) {
@@ -227,8 +260,9 @@ export class JsonWebSignatureVerifier {
   }
 
   /**
-   * The function fetches issuer and revocation data from specified URLs if the necessary keys are
-   * present in the certificate and issuer profile data.
+   * Fetches issuer profile and revocation list data from remote URLs.
+   * Retrieves issuer profile URL from credential, then fetches revocation list if available.
+   * @returns A promise that resolves when data fetching is complete.
    */
   private async fetchIssuerAndRevocationData(): Promise<void> {
     if (isKeyPresent(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.issuer)) {
@@ -246,10 +280,8 @@ export class JsonWebSignatureVerifier {
   }
 
   /**
-   * The function `performRevocationStatusValidation` asynchronously validates the revocation status of a
-   * certificate using various data inputs.
-   * @returns The `performRevocationStatusValidation` method is returning a boolean value, specifically
-   * the `status` property of the `validationResponse` object.
+   * Performs revocation status validation using the RevocationStatusCheck validator.
+   * @returns A promise resolving to true if credential is not revoked, false otherwise.
    */
   private async performRevocationStatusValidation(): Promise<boolean> {
     const validationResponse = await new RevocationStatusCheck(this.progressCallback).validate(
@@ -260,6 +292,11 @@ export class JsonWebSignatureVerifier {
     return validationResponse.status;
   }
 
+  /**
+   * Verifies the cryptographic signature of the JWT token.
+   * Uses SignatureValidator to validate the token signature against the header algorithm.
+   * @returns A promise resolving to true if signature is valid, false otherwise.
+   */
   private async verifySignature(): Promise<boolean> {
     const signatureValidator = new SignatureValidator(this.progressCallback);
     const signatureValidationResult = await signatureValidator.validate(this.jwtToken, this.header);

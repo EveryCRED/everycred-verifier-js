@@ -1,5 +1,5 @@
 import { MerkleProofValidator2019 } from '../checksum/merkle-proof-2019-validation';
-import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS } from '../constants/common';
+import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, DEFAULT_CONFIG } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { VerificationConfig } from '../models/common.model';
@@ -18,14 +18,16 @@ export class Ed25519CredentialVerifier {
   private credentialIssuerValidation: boolean = false;
   private revocationStatusValidation: boolean = false;
   private networkName: string = '';
-  private offChainVerification: boolean = false;
+  private offChainVerification = DEFAULT_CONFIG.offChainVerification;
+  private readonly isLogDiagnosticStep = DEFAULT_CONFIG.logDiagnosticStep;
 
   constructor(
     private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void,
     private readonly config: VerificationConfig
   ) {
     this.offChainVerification = this.config?.offChainVerification ?? this.offChainVerification;
-    if (this.config?.logDiagnosticStep) {
+    this.isLogDiagnosticStep = this.config?.logDiagnosticStep ?? this.isLogDiagnosticStep;
+    if (this.isLogDiagnosticStep) {
       this.progressCallback = (step: string, title: string, status: boolean, reason: string) => {
         logDiagnosticStep({ step, title, status, reason }, this.certificate);
       };

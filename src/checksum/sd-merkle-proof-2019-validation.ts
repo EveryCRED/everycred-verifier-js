@@ -1,8 +1,6 @@
 import { Buffer } from 'buffer';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import nacl from 'tweetnacl';
-import naclUtil from 'tweetnacl-util';
 import Web3 from 'web3';
 import {
   ALGORITHM_TYPES,
@@ -11,7 +9,6 @@ import {
   BLOCKCHAIN_API_LIST,
   BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
-  CREDENTIALS_VALIDATORS_KEYS,
   GENERAL_KEYWORDS,
   SD_CREDENTIAL_VALIDATORS_KEYS
 } from '../constants/common';
@@ -36,7 +33,7 @@ export class SdMerkleProofValidator2019 {
   private isMerkleProofVerified: boolean = false;
   networkName: string = '';
 
-  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+  constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function `validate` performs various checks on credential data and returns a response
@@ -47,7 +44,7 @@ export class SdMerkleProofValidator2019 {
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
-  async validate(credentialData: any, offChainVerification: boolean): Promise<NetworkResponseStatus> {
+  async validate(credentialData: any): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
     const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
@@ -62,7 +59,6 @@ export class SdMerkleProofValidator2019 {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, false, '');
     }
 
-    if (!offChainVerification) {
       const checks = await Promise.all([
         this.checkDecodedAnchors(),
         this.checkDecodedPath(),
@@ -74,24 +70,13 @@ export class SdMerkleProofValidator2019 {
       if (!checks.every(check => check.status)) {
         return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
       }
-    }
 
-    let verificationStatus = false;
-    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
-    const isV2Context = contextData.some(str => str.endsWith("v2"));
-    const proofKey = isV2Context ? "cryptosuite" : "type";
-
-    if (firstEvidence?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
-      verificationStatus = (await this.verifyEd25519()).status;
-    } else {
-      verificationStatus = (await this.verifyMerkleProof()).status;
-    }
-
+    const verificationStatus = (await this.verifyMerkleProof()).status;
     if (verificationStatus) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_SUCCESS, true, this.networkName);
     }
 
-    return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+    return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, this.networkName);
   }
 
   /**
@@ -114,46 +99,6 @@ export class SdMerkleProofValidator2019 {
     } else {
       this.progressCallback(Stages.verifyTargetHash, Messages.VALIDATE_TARGET_HASH, false, Messages.CALCULATED_HASH_DIFFER_FROM_TARGETHASH);
       return { message: Messages.DATA_INTEGRITY_CHECK_FAILED, status: false, networkName: this.networkName };
-    }
-  }
-
-  /**
-   * The `verifyEd25519` function verifies the Ed25519 signature of a credential by comparing it with the
-   * calculated hash value.
-   * @returns The function `verifyEd25519` returns a Promise that resolves to an object with the
-   * following properties:
-   */
-  private async verifyEd25519(): Promise<NetworkResponseStatus> {
-    try {
-      const dataToVerify = { ...this.credential };
-      delete dataToVerify.evidence;
-
-      const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
-      const firstEvidence = Array.isArray(evidenceData) && evidenceData.length > 0 ? evidenceData[0] : null;
-
-      // Convert data object to Uint8Array
-      const dataString = JSON.stringify(dataToVerify);
-      const messageUint8 = naclUtil.decodeUTF8(dataString);
-      const signature = naclUtil.decodeBase64(firstEvidence?.proofValue);
-      const publicKey = getDataFromKey(
-        firstEvidence,
-        CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
-      )?.split('#')[1];
-      const pubKey = naclUtil.decodeBase64(publicKey);
-
-      // Verify the signature
-      const isValid = nacl.sign.detached.verify(messageUint8, signature, pubKey);
-
-      if (isValid) {
-        this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, true, Messages.SIGNATURE_VERIFICATION_SUCCESS);
-        return { message: Messages.SIGNATURE_VERIFICATION, status: true, networkName: this.networkName };
-      } else {
-        this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.SIGNATURE_VERIFICATION_FAILED);
-        return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
-      }
-    } catch (error) {
-      this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.SIGNATURE_VERIFICATION_FAILED);
-      return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
     }
   }
 
@@ -187,11 +132,13 @@ export class SdMerkleProofValidator2019 {
    */
   private async getNormalizedData() {
     const dataToNormalize = { ...this.credential };
-    //TODO: Testing remaining for the algorithm validation
     delete dataToNormalize.evidence;
 
-    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
+    if(isKeyPresent(dataToNormalize, CHECKSUM_MERKLEPROOF_CHECK_KEYS.iat)) {
+      delete dataToNormalize.iat;
+    }
 
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
 
     return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: evidenceData };
   }

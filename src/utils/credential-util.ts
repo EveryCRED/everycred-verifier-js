@@ -1,5 +1,5 @@
 import { cloneDeep, get, has, isEmpty } from "lodash";
-import { DATE_TIME_FORMAT_LOCALE, DATE_TIME_FORMAT_OPTIONS } from '../constants/common';
+import { DATE_TIME_FORMAT_LOCALE, DATE_TIME_FORMAT_OPTIONS, SD_CREDENTIAL_VALIDATORS_KEYS } from '../constants/common';
 import { logger } from "./logger";
 
 /**
@@ -129,4 +129,20 @@ export function isFutureDate(dateString: string): boolean {
 export function formatCustomDate(inputDate: Date): string {
   const formatter = new Intl.DateTimeFormat(DATE_TIME_FORMAT_LOCALE, DATE_TIME_FORMAT_OPTIONS);
   return formatter.format(inputDate);
+}
+
+/**
+ * The function checks if a credential contains valid evidence data. It verifies that the evidence
+ * key is present, the evidence value is an array, and the array contains at least one element.
+ * @param {any} credential - The credential parameter is an object that represents a credential
+ * data structure. It should contain an evidence field that can be checked for validity.
+ * @returns The function `hasEvidence` returns a boolean value. It returns `true` if the credential
+ * has a valid evidence field (present, is an array, and has at least one element), and `false`
+ * otherwise.
+ */
+export function hasEvidence(credential: any): boolean {
+  const hasEvidence = isKeyPresent(credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence) 
+  && Array.isArray(getDataFromKey(credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)) 
+  && getDataFromKey(credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence).length > 0;
+  return hasEvidence;
 }

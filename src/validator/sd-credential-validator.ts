@@ -1,6 +1,7 @@
 import {
   deepCloneData,
   getDataFromKey,
+  hasEvidence,
   isKeyPresent,
 } from "../utils/credential-util";
 
@@ -56,13 +57,16 @@ export class SdCredentialValidator {
   async validate(credentialData: any): Promise<ResponseMessage> {
     this.sdCredential = deepCloneData(credentialData);
 
+    const hasEvidenceInCredential = hasEvidence(this.sdCredential);
+    const evidenceValidation = hasEvidenceInCredential ? (await this.validateCredentialEvidence()).status : true;
+
     if (
       (await this.validateCredentialType()).status &&
       (await this.validateCredentialContext()).status &&
       (await this.validateCredentialID()).status &&
       (await this.validateCredentialSubject()).status &&
       (await this.validateIssuer()).status &&
-      (await this.validateCredentialEvidence()).status &&
+      evidenceValidation &&
       (await this.validateCredentialIssuanceDate()).status
     ) {
       this.progressCallback(Stages.validateCredential, Messages.CREDENTIAL_VALIDATION, true, Messages.CREDENTIAL_VALIDATION_SUCCESS);
@@ -292,5 +296,4 @@ export class SdCredentialValidator {
     this.progressCallback(Stages.validateCredentialIssuanceDate, Messages.ISSUANCE_DATE_KEY_VALIDATE, false, Messages.ISSUANCE_DATE_KEY_ERROR);
     return { step: Stages.validateCredentialIssuanceDate, title: Messages.ISSUANCE_DATE_KEY_VALIDATE, status: false, reason: Messages.ISSUANCE_DATE_KEY_ERROR };
   }
-
 }
