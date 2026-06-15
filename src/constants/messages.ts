@@ -159,4 +159,26 @@ export enum Messages {
   DATA_INTEGRITY_CHECK = "Data Integrity Check",
   DATA_INTEGRITY_CHECK_SUCCESS = "Data Integrity Check successful.",
   DATA_INTEGRITY_CHECK_FAILED = "Data Integrity Check failed.",
+
+  BLOCKCHAIN_VALIDATION_SKIPPED = "Blockchain validation skipped",
+
+  /**
+   * SD Credential Verification Messages
+   */
+  INVALID_OBJECT = "Invalid SD credential: must be an object",
+  INVALID_FORMAT = "Invalid format: expected 'vc+ld+sd_jwt', got '{{received}}'",
+  INVALID_CREDENTIAL = "Invalid credential: must be a JWT string",
+  INVALID_DISCLOSURES = "Invalid disclosures: must be an array",
+  INVALID_ISSUER = "Invalid issuer: must be a string",
+  INVALID_ISSUED_AT = "Invalid issued_at: must be a string",
+  INVALID_JWT_TOKEN = "Invalid JWT token: must be a non-empty string",
+
+  VALID_SD_CREDENTIAL_FORMAT_AND_STRUCTURE_SUCCESS = "SD credential format and structure validation succeeded",
+  VALID_SD_CREDENTIAL_FORMAT_AND_STRUCTURE_FAILED = "SD credential format and structure validation failed",
+  VALID_SD_CREDENTIAL_JWT_TOKEN_SUCCESS = "SD credential JWT token validation succeeded",
+  VALID_SD_CREDENTIAL_JWT_TOKEN_FAILED = "SD credential JWT token validation failed",
+
+  JWT_TOKEN_PARSING_FAILED = "Invalid JWT token: parsing failed",
+  JWT_TOKEN_PARSING_SUCCESS = "JWT token parsing succeeded",
+
 }

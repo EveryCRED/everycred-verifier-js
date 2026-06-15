@@ -1,8 +1,6 @@
 import { Buffer } from 'buffer';
 import { isEmpty } from 'lodash';
 import sha256 from 'sha256';
-import nacl from 'tweetnacl';
-import naclUtil from 'tweetnacl-util';
 import Web3 from 'web3';
 import {
   ALGORITHM_TYPES,
@@ -11,8 +9,8 @@ import {
   BLOCKCHAIN_API_LIST,
   BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
-  CREDENTIALS_VALIDATORS_KEYS,
-  GENERAL_KEYWORDS
+  GENERAL_KEYWORDS,
+  SD_CREDENTIAL_VALIDATORS_KEYS
 } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
@@ -27,7 +25,7 @@ import {
 } from '../utils/credential-util';
 import { logger } from '../utils/logger';
 
-export class MerkleProofValidator2019 {
+export class SdMerkleProofValidator2019 {
   private credential: any;
   private decodedData: any;
   private normalizedDecodedData: any;
@@ -35,7 +33,7 @@ export class MerkleProofValidator2019 {
   private isMerkleProofVerified: boolean = false;
   networkName: string = '';
 
-  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+  constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
   /**
    * The function `validate` performs various checks on credential data and returns a response
@@ -46,11 +44,14 @@ export class MerkleProofValidator2019 {
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
-  async validate(credentialData: any, offChainVerification: boolean): Promise<NetworkResponseStatus> {
+  async validate(credentialData: any): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
+    const firstEvidence = Array.isArray(evidenceData) && evidenceData.length > 0 ? evidenceData[0] : null;
+
     // fallback for optional blockchain verification (No blockchain data found)
-    if (!Object.keys(this.credential?.proof?.merkleProof || {}).length) {
+    if (!Object.keys(firstEvidence || {}).length) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_SUCCESS, true, '');
     }
 
@@ -58,7 +59,6 @@ export class MerkleProofValidator2019 {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, false, '');
     }
 
-    if (!offChainVerification) {
       const checks = await Promise.all([
         this.checkDecodedAnchors(),
         this.checkDecodedPath(),
@@ -70,24 +70,13 @@ export class MerkleProofValidator2019 {
       if (!checks.every(check => check.status)) {
         return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
       }
-    }
 
-    let verificationStatus = false;
-    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
-    const isV2Context = contextData.some(str => str.endsWith("v2"));
-    const proofKey = isV2Context ? "cryptosuite" : "type";
-
-    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
-      verificationStatus = (await this.verifyEd25519()).status;
-    } else {
-      verificationStatus = (await this.verifyMerkleProof()).status;
-    }
-
+    const verificationStatus = (await this.verifyMerkleProof()).status;
     if (verificationStatus) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_SUCCESS, true, this.networkName);
     }
 
-    return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+    return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, this.networkName);
   }
 
   /**
@@ -114,55 +103,15 @@ export class MerkleProofValidator2019 {
   }
 
   /**
-   * The `verifyEd25519` function verifies the Ed25519 signature of a credential by comparing it with the
-   * calculated hash value.
-   * @returns The function `verifyEd25519` returns a Promise that resolves to an object with the
-   * following properties:
-   */
-  private async verifyEd25519(): Promise<NetworkResponseStatus> {
-    try {
-      const dataToVerify = { ...this.credential };
-      delete dataToVerify.proof;
-
-      // Convert data object to Uint8Array
-      const dataString = JSON.stringify(dataToVerify);
-      const messageUint8 = naclUtil.decodeUTF8(dataString);
-      const signature = naclUtil.decodeBase64(this.credential?.proof?.proofValue);
-      const publicKey = getDataFromKey(
-        this.credential?.proof,
-        CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
-      )?.split('#')[1];
-      const pubKey = naclUtil.decodeBase64(publicKey);
-
-      // Verify the signature
-      const isValid = nacl.sign.detached.verify(messageUint8, signature, pubKey);
-
-      if (isValid) {
-        this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, true, Messages.SIGNATURE_VERIFICATION_SUCCESS);
-        return { message: Messages.SIGNATURE_VERIFICATION, status: true, networkName: this.networkName };
-      } else {
-        this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.SIGNATURE_VERIFICATION_FAILED);
-        return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
-      }
-    } catch (error) {
-      this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.SIGNATURE_VERIFICATION_FAILED);
-      return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
-    }
-  }
-
-  /**
    * The `getData` function retrieves and processes data based on the provided credential data.
    * @param {any} credentialData - The `credentialData` parameter is an object that contains data
    * related to a credential. It may have the following properties:
    */
   private async getData(credentialData: any): Promise<void> {
     this.credential = deepCloneData(credentialData);
-    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
 
-    const isV2Context = contextData.some(str => str.endsWith("v2"));
-    const proofKey = isV2Context ? "cryptosuite" : "type";
-
-    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(this.credential?.proof?.merkleProof || {}).length) {
+    if (evidenceData?.type === ALGORITHM_TYPES.ED25519SIGNATURE2020 || Object.keys(evidenceData || {}).length) {
       this.normalizedDecodedData = await this.getNormalizedData();
       this.decodedData = getDataFromKey(
         this.normalizedDecodedData,
@@ -175,17 +124,23 @@ export class MerkleProofValidator2019 {
 
   /**
    * The function `getNormalizedData` returns an object with a stringified version of `this.credential`
-   * and the `merkleProof` value from `this.credential.proof`.
+   * and the `merkleProof` value from `this.credential.evidence[0]`.
    * @returns an object with two properties: "get_byte_array_to_issue" and "decoded_proof_value". The
    * value of "get_byte_array_to_issue" is a stringified JSON representation of the "dataToNormalize"
-   * object, with the "proof" property removed. The value of "decoded_proof_value" is the value of
-   * "this.credential.proof.merkleProof".
+   * object, with the "evidence" property removed. The value of "decoded_proof_value" is the value of
+   * "this.credential.evidence[0].merkleProof".
    */
   private async getNormalizedData() {
     const dataToNormalize = { ...this.credential };
-    delete dataToNormalize.proof;
+    delete dataToNormalize.evidence;
 
-    return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: this.credential?.proof?.merkleProof };
+    if(isKeyPresent(dataToNormalize, CHECKSUM_MERKLEPROOF_CHECK_KEYS.iat)) {
+      delete dataToNormalize.iat;
+    }
+
+    const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence)[0];
+
+    return { get_byte_array_to_issue: JSON.stringify(dataToNormalize), decoded_proof_value: evidenceData };
   }
 
   /**
@@ -347,8 +302,6 @@ export class MerkleProofValidator2019 {
       return { message: Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, status: false };
     }
 
-    // Building the final URL using buildTransactionUrl method
-    const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID);
 
     try {
       if (this.networkName === BLOCKCHAIN_API_LIST[4]?.id) {
@@ -356,6 +309,9 @@ export class MerkleProofValidator2019 {
         const web3 = new Web3(new Web3.providers.HttpProvider(`${matchedAPI.url}`));
         this.blockchainApiResponse = await web3.eth.getTransaction(transactionID);
       } else {
+        // Building the final URL using buildTransactionUrl method
+        const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID, matchedAPI.chainId);
+
         // Fetching data from the API using finalUrl
         this.blockchainApiResponse = await getDataFromAPI(finalUrl);
       }
@@ -451,9 +407,9 @@ export class MerkleProofValidator2019 {
    * of a transaction in the Ethereum blockchain.
    * @returns a string that represents the complete transaction URL.
    */
-  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string): Promise<string> {
+  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string, chainid: number): Promise<string> {
     const endpoint = "api?module=proxy&action=eth_getTransactionByHash";
-    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}`;
+    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}&chainid=${chainid}`;
 
     return `${url}${endpoint}${queryParams}`;
   }

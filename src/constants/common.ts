@@ -1,3 +1,5 @@
+import { VerificationConfig } from "../models/common.model";
+
 /* Defining a constant object called `CREDENTIALS_CONSTANTS` which contains various properties related
 to verifiable credentials. These properties include the type of verifiable credential, the context
 values, the required keys for the credential subject and proof, the supported proof type, the
@@ -76,6 +78,7 @@ export enum REVOCATION_STATUS_CHECK_KEYS {
 Merkle proof. Each key is assigned a string value that represents a specific property or field
 related to the Merkle proof. */
 export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
+  iat = 'iat',
   decoded_proof_value = 'decoded_proof_value',
   get_byte_array_to_issue = 'get_byte_array_to_issue',
   anchors = 'anchors',
@@ -92,11 +95,11 @@ Each object has an 'id' identifying the blockchain, 'url' indicating the API end
 Use these APIs to interact with Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet, Polygon Testnet, and Polygon Amoy.
 Ensure to use the respective API key for authentication purposes. */
 export const BLOCKCHAIN_API_LIST = [
-  { id: 'ethereumMainnet', url: 'https://api.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
-  { id: 'ethereumSepolia', url: 'https://api-sepolia.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
-  { id: 'polygonMainnet', url: 'https://api.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
-  { id: 'polygonTestnet', url: 'https://api-testnet.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
-  { id: 'polygonAmoy', url: 'https://rpc-amoy.polygon.technology/', apiKey: '9876543210' }, // No API Key is needed, provided placeholder
+  { id: 'ethereumMainnet', chainId: 1, url: 'https://api.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
+  { id: 'ethereumSepolia', chainId: 11155111, url: 'https://api-sepolia.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
+  { id: 'polygonMainnet', chainId: 137, url: 'https://api.etherscan.io/v2/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },// not working 
+  { id: 'polygonTestnet', chainId: 80001, url: 'https://api-testnet.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
+  { id: 'polygonAmoy', chainId: 80002, url: 'https://rpc-amoy.polygon.technology/', apiKey: '9876543210' }, // No API Key is needed, provided placeholder
 ];
 
 /* The `export enum BASE_API` is defining an enumeration called `BASE_API` that represents different
@@ -218,3 +221,60 @@ export const API_URLS = new Map<EnvironmentApis, string>([
  * if no specific API URL is provided.
 */
 export const DEFAULT_API_URL = 'https://product-api.everycred.com';
+
+export enum SD_CREDENTIAL_VALIDATORS_KEYS {
+  type = 'type',
+  context = '@context',
+  id = 'id',
+  credentialSubject = 'credentialSubject',
+  issuanceDate = 'issuanceDate',
+  validUntilDate = 'validUntil',
+  validFromDate = 'validFrom',
+  issuer = 'issuer',
+  proof = 'proof',
+  evidence = 'evidence',
+}
+
+export const SD_CREDENTIALS_CONSTANTS = {
+  verifiable_credential: [
+    'VerifiableCredential',
+    'EveryCREDCredential'
+  ],
+  context_values: [
+    'https://w3id.org/everycred/v1',
+    'https://www.w3.org/2018/credentials/v1',
+    'https://www.w3.org/ns/credentials/v2',
+    "https://www.w3.org/2018/credentials/examples/v1"
+  ],
+  credentialSubjectRequiredKeys: ['id', 'profile'],
+  issuerRequiredKeys: ['id', 'profile'],
+  proofRequiredKeys: [
+    'type',
+    'cryptosuite',
+    'created',
+    'proofPurpose',
+    'proofValue',
+    'verificationMethod',
+  ],
+  merkleProof2019RequiredKeys: [
+    'type',
+    'path',
+    'merkleRoot',
+    'targetHash',
+    'anchors',
+  ],
+  proofTypeSupported: ['Ed25519Signature2020', 'MerkleProof2019'],
+  issuerProfileTypeSupported: ['Profile'],
+  issuerProfilePublicKeyFields: ['id', 'created'],
+  revocation_list_type_supported: 'RevocationList',
+};
+
+export const DEFAULT_CONFIG: Required<VerificationConfig> = {
+  offChainVerification: false,
+  isBlockchainVerificationEnabled: true,
+  logDiagnosticStep: false,
+};
+
+export enum SDCredentialFormat {
+  EXPECTED_FORMAT = 'vc+ld+sd_jwt'
+}
