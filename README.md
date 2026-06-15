@@ -3,7 +3,7 @@
 # EveryCRED Verifier JS
 
 [![Made by EveryCRED](https://img.shields.io/badge/Made%20by-EveryCRED-blue)](https://everycred.com)
-![Version](https://img.shields.io/badge/Version-2.0.0--beta.0-blue)
+![Version](https://img.shields.io/badge/Version-2.0.0-blue)
 
 [EveryCRED Verifier JS](https://www.npmjs.com/package/@viitorcloudtechnologies/everycred-verifier-js) is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -35,7 +35,7 @@ The EveryCRED Verifier JS supports two credential formats:
 The `EveryCredVerifier` constructor accepts a `VerificationConfig` object with the following options:
 
 - `offChainVerification` (boolean, default: `false`): Perform verification without requiring internet connection or external API calls 
-- `isBlockchainVerificationEnabled` (boolean, default: `false`): Enable blockchain-based verification checks
+- `isBlockchainVerificationEnabled` (boolean, default: `true`): Enable blockchain-based verification checks. Note: for SD JWT credentials this value is overridden automatically based on the presence of an `evidence` field (see [SD JWT Credential Format](#sd-jwt-credential-format)).
 - `logDiagnosticStep` (boolean, default: `false`): Enable detailed diagnostic logging in the console
 
 ## On-Chain Verification
@@ -154,9 +154,9 @@ const result = await verifier.verify(sdCredential);
 
 ### Special Notes
 
-- **Evidence Field**: If the credential contains an `evidence` field, blockchain verification is automatically disabled, even if `isBlockchainVerificationEnabled` is set to `true`.
+- **Evidence Field**: For SD JWT credentials, blockchain verification is decided automatically by the presence of an `evidence` field — if `evidence` is present, on-chain verification runs; if it is absent, on-chain verification is skipped. This auto-detection overrides any `isBlockchainVerificationEnabled` value passed in the configuration for this format.
 - **Signature Algorithm**: SD JWT credentials use RS256 algorithm for signature verification.
 
 ## Package Notes
 
-Version 2.0.0-beta.0 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard. The package now supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. 
+Version 2.0.0 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard. The package now supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. 
