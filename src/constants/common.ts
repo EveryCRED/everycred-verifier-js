@@ -91,15 +91,27 @@ export enum CHECKSUM_MERKLEPROOF_CHECK_KEYS {
 }
 
 /* BLOCKCHAIN_API_LIST contains an array of objects representing various blockchain APIs.
-Each object has an 'id' identifying the blockchain, 'url' indicating the API endpoint, and 'apiKey' for authentication.
+Each object has an 'id' identifying the blockchain, 'chainId', 'url' indicating the API endpoint,
+and 'provider' indicating which runtime-supplied API key to use for authentication.
+API keys are NEVER stored here — they are provided by the consumer via
+`VerificationConfig.blockchainApiKeys` and resolved at request time.
 Use these APIs to interact with Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet, Polygon Testnet, and Polygon Amoy.
-Ensure to use the respective API key for authentication purposes. */
-export const BLOCKCHAIN_API_LIST = [
-  { id: 'ethereumMainnet', chainId: 1, url: 'https://api.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
-  { id: 'ethereumSepolia', chainId: 11155111, url: 'https://api-sepolia.etherscan.io/', apiKey: '9RS1QFI8HR3WF11YKESZYRJCW44QC4W1G7' },
-  { id: 'polygonMainnet', chainId: 137, url: 'https://api.etherscan.io/v2/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },// not working 
-  { id: 'polygonTestnet', chainId: 80001, url: 'https://api-testnet.polygonscan.com/', apiKey: 'Z6G5RJPZIP7WFXZTJE2MRY1191XCR7X955' },
-  { id: 'polygonAmoy', chainId: 80002, url: 'https://rpc-amoy.polygon.technology/', apiKey: '9876543210' }, // No API Key is needed, provided placeholder
+The 'provider' field maps to a key on `BlockchainApiKeys`. Polygon Amoy uses a public RPC
+endpoint and therefore has no provider (no API key required). */
+export const BLOCKCHAIN_API_LIST: ReadonlyArray<{
+  id: string;
+  chainId: number;
+  url: string;
+  provider?: 'ethereum' | 'polygon';
+  // When true, the transaction is fetched via a web3.js JSON-RPC node (HTTP POST)
+  // instead of an explorer REST API (HTTP GET). Set this for raw RPC node URLs.
+  rpc?: boolean;
+}> = [
+  { id: 'ethereumMainnet', chainId: 1, url: 'https://api.etherscan.io/', provider: 'ethereum' }, // Ethereum Mainnet will be queried via Etherscan v2 multichain endpoint after testing
+  { id: 'ethereumSepolia', chainId: 11155111, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' },
+  { id: 'polygonMainnet', chainId: 137, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' }, // queried via Etherscan v2 multichain endpoint
+  { id: 'polygonTestnet', chainId: 80001, url: 'https://api-testnet.polygonscan.com/', provider: 'polygon' },
+  { id: 'polygonAmoy', chainId: 80002, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' }, // public RPC, no API key required
 ];
 
 /* The `export enum BASE_API` is defining an enumeration called `BASE_API` that represents different
@@ -273,6 +285,7 @@ export const DEFAULT_CONFIG: Required<VerificationConfig> = {
   offChainVerification: false,
   isBlockchainVerificationEnabled: true,
   logDiagnosticStep: false,
+  blockchainApiKeys: {},
 };
 
 export enum SDCredentialFormat {

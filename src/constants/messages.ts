@@ -143,6 +143,7 @@ export enum Messages {
   TRANSACTION_NOT_FOUND_ERROR = "Transaction not found.",
   DATA_FETCHED_ERROR = "Failed to fetch data from the blockchain API.",
   DATA_FETCHED_SUCCESS = "Data successfully fetched from the blockchain API.",
+  BLOCKCHAIN_API_ERROR_RESPONSE = "Blockchain API returned an error response (NOTOK).",
 
   MERKLE_PROOF_VALIDATE = 'Validate Merkleproof',
   CALCULATED_HASH_DIFFER_FROM_MERKLEROOT = "The calculated hash does not match the provided merkleRoot.",

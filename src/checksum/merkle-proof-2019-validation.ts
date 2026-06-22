@@ -11,13 +11,12 @@ import {
   BLOCKCHAIN_API_LIST,
   BUFFER_ENCODING_TYPE,
   CHECKSUM_MERKLEPROOF_CHECK_KEYS,
-  CREDENTIALS_VALIDATORS_KEYS,
-  GENERAL_KEYWORDS
+  CREDENTIALS_VALIDATORS_KEYS
 } from '../constants/common';
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { CreateResponse, NetworkResponseStatus } from '../models/checksum.model';
-import { ResponseMessage } from '../models/common.model';
+import { ResponseMessage, VerificationConfig } from '../models/common.model';
 import {
   deepCloneData,
   getDataFromAPI,
@@ -35,7 +34,10 @@ export class MerkleProofValidator2019 {
   private isMerkleProofVerified: boolean = false;
   networkName: string = '';
 
-  constructor(private progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+  constructor(
+    private progressCallback: (step: string, title: string, status: boolean, reason: string) => void,
+    private readonly config: VerificationConfig = {}
+  ) { }
 
   /**
    * The function `validate` performs various checks on credential data and returns a response
@@ -338,20 +340,26 @@ export class MerkleProofValidator2019 {
       return { message: Messages.NO_MATCHING_API_FOUND_ERROR, status: false };
     }
 
-    // Retrieving the URL and apiKey from matchedAPI
-    const url = getDataFromKey(matchedAPI, GENERAL_KEYWORDS.url);
-    const apiKey = getDataFromKey(matchedAPI, GENERAL_KEYWORDS.apiKey);
+    // Retrieving the URL from the matched API and the API key from the runtime config.
+    // Keys are never bundled — the consumer supplies them via config.blockchainApiKeys.
+    const url = matchedAPI.url;
+    const apiKey = matchedAPI.provider ? this.config?.blockchainApiKeys?.[matchedAPI.provider] : undefined;
+    // An API key is required only for explorer-backed networks (those with a provider).
+    // RPC-node networks have no provider and therefore need no key.
+    const requiresApiKey = Boolean(matchedAPI.provider);
 
-    if (!url || !apiKey) {
+    if (!url || (requiresApiKey && !apiKey)) {
       this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.URL_OR_APIKEY_RETRIEVAL_ERROR);
       return { message: Messages.URL_OR_APIKEY_RETRIEVAL_ERROR, status: false };
     }
 
     // Building the final URL using buildTransactionUrl method
-    const finalUrl = await this.buildTransactionUrl(url, apiKey, transactionID);
+    const finalUrl = await this.buildTransactionUrl(url, apiKey ?? '', transactionID, matchedAPI.chainId);
 
     try {
-      if (this.networkName === BLOCKCHAIN_API_LIST[4]?.id) {
+      // RPC-node networks (matchedAPI.rpc === true) are queried over web3.js JSON-RPC (HTTP POST);
+      // explorer-backed networks use the REST API (HTTP GET) via the built finalUrl.
+      if (matchedAPI.rpc) {
         // Fetching data using the RPC URL using WEB3 js
         const web3 = new Web3(new Web3.providers.HttpProvider(`${matchedAPI.url}`));
         this.blockchainApiResponse = await web3.eth.getTransaction(transactionID);
@@ -364,6 +372,15 @@ export class MerkleProofValidator2019 {
       return { message: Messages.TRANSACTION_NOT_FOUND_ERROR, status: false };
     }
 
+    // Explorer APIs (Etherscan/Polygonscan) reply HTTP 200 with { status: "0", message: "NOTOK", result }
+    // on failure (invalid/expired key, rate limit, deprecated endpoint, etc.). A non-empty body is NOT
+    // proof of success, so detect and reject the error envelope explicitly.
+    const apiError = this.isBlockchainApiError(this.blockchainApiResponse);
+    if (apiError) {
+      this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, apiError);
+      return { message: apiError, status: false };
+    }
+
     if (!isEmpty(this.blockchainApiResponse)) {
       this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, true, Messages.DATA_FETCHED_SUCCESS);
       return { message: Messages.DATA_FETCHED_SUCCESS, status: true };
@@ -371,6 +388,24 @@ export class MerkleProofValidator2019 {
 
     this.progressCallback(Stages.fetchDataFromBlockchainAPI, Messages.BLOCKCHAIN_DATA_VALIDATE, false, Messages.DATA_FETCHED_ERROR);
     return { message: Messages.DATA_FETCHED_ERROR, status: false };
+  }
+
+  /**
+   * Detects an explorer-API error envelope ({ status: "0" } or { message: "NOTOK" }).
+   * @param response - The raw response returned by the blockchain explorer API.
+   * @returns A human-readable error reason when the response is an error envelope, otherwise null.
+   */
+  private isBlockchainApiError(response: any): string | null {
+    if (!response || typeof response !== 'object') {
+      return null;
+    }
+    const isError = `${response.status}` === '0' || response.message === 'NOTOK';
+    if (!isError) {
+      return null;
+    }
+    // Prefer the explorer's own message (e.g. "deprecated V1 endpoint") when present.
+    const detail = typeof response.result === 'string' ? response.result : '';
+    return detail ? `${Messages.BLOCKCHAIN_API_ERROR_RESPONSE} ${detail}` : Messages.BLOCKCHAIN_API_ERROR_RESPONSE;
   }
 
   /**
@@ -449,11 +484,13 @@ export class MerkleProofValidator2019 {
    * users can access the endpoint.
    * @param {string} transactionID - The `transactionID` parameter is a string that represents the hash
    * of a transaction in the Ethereum blockchain.
+   * @param {number} chainid - The `chainid` parameter is the numeric chain identifier required by the
+   * Etherscan v2 multichain API to target the correct network.
    * @returns a string that represents the complete transaction URL.
    */
-  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string): Promise<string> {
+  private async buildTransactionUrl(url: string, apiKey: string, transactionID: string, chainid: number): Promise<string> {
     const endpoint = "api?module=proxy&action=eth_getTransactionByHash";
-    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}`;
+    const queryParams = `&apikey=${apiKey}&txhash=${transactionID}&chainid=${chainid}`;
 
     return `${url}${endpoint}${queryParams}`;
   }

@@ -239,7 +239,7 @@ export class JsonWebSignatureVerifier {
    * @returns A promise resolving to true if checksum validation passes, false otherwise.
    */
   private async validateChecksum(): Promise<boolean> {
-    const validate = await new SdMerkleProofValidator2019(this.progressCallback).validate(this.credential);
+    const validate = await new SdMerkleProofValidator2019(this.progressCallback, this.config).validate(this.credential);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
     return this.isChecksumValidated;
