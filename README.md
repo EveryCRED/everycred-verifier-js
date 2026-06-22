@@ -37,6 +37,13 @@ The `EveryCredVerifier` constructor accepts a `VerificationConfig` object with t
 - `offChainVerification` (boolean, default: `false`): Perform verification without requiring internet connection or external API calls 
 - `isBlockchainVerificationEnabled` (boolean, default: `true`): Enable blockchain-based verification checks. Note: for SD JWT credentials this value is overridden automatically based on the presence of an `evidence` field (see [SD JWT Credential Format](#sd-jwt-credential-format)).
 - `logDiagnosticStep` (boolean, default: `false`): Enable detailed diagnostic logging in the console
+- `blockchainApiKeys` (object, default: `{}`): Blockchain explorer API keys supplied by **you** at runtime — required for on-chain verification. The library no longer bundles any keys.
+  - `ethereum` (string): [Etherscan](https://etherscan.io/myapikey) API key. Used for any network reached through the Etherscan v2 multichain API — currently Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet, and Polygon Amoy.
+  - `polygon` (string): [Polygonscan](https://polygonscan.com/myapikey) API key. Used for Polygon Testnet.
+
+  Each network entry declares which key it needs, so you only have to provide the keys for the networks your credentials actually use. Networks reached over the Etherscan v2 endpoint are distinguished by their `chainId`.
+
+  > **Breaking change (v3.0.0):** API keys are no longer shipped with the package. On-chain verification will fail with a clear error (`Failed to retrieve URL or API key from the matched API.`) unless you provide your own keys via `blockchainApiKeys`. Off-chain verification is unaffected. **Never hardcode these keys** — load them from environment variables or a secrets manager.
 
 ## On-Chain Verification
 
@@ -67,9 +74,14 @@ const certificate = {
     // For Ed25519 format, include standard W3C credential fields
 };
 
-// Create an instance of EveryCredVerifier with configuration
+// Create an instance of EveryCredVerifier with configuration.
+// Supply your own blockchain explorer API keys at runtime — never hardcode them.
 const verifier = new EveryCredVerifier(progressCallback, {
-    isBlockchainVerificationEnabled: true
+    isBlockchainVerificationEnabled: true,
+    blockchainApiKeys: {
+        ethereum: process.env.ETHERSCAN_API_KEY,
+        polygon: process.env.POLYGONSCAN_API_KEY,
+    },
 });
 
 // Perform on-chain verification
@@ -157,6 +169,29 @@ const result = await verifier.verify(sdCredential);
 - **Evidence Field**: For SD JWT credentials, blockchain verification is decided automatically by the presence of an `evidence` field — if `evidence` is present, on-chain verification runs; if it is absent, on-chain verification is skipped. This auto-detection overrides any `isBlockchainVerificationEnabled` value passed in the configuration for this format.
 - **Signature Algorithm**: SD JWT credentials use RS256 algorithm for signature verification.
 
+## Migrating from v2.x to v3.0.0
+
+v3.0.0 removes the blockchain explorer API keys that were previously bundled with the package. To upgrade:
+
+1. **Obtain your own keys** from [Etherscan](https://etherscan.io/myapikey) and, if you verify Polygon Testnet credentials, [Polygonscan](https://polygonscan.com/myapikey).
+2. **Pass them via `blockchainApiKeys`** when constructing the verifier (see [Configuration Options](#configuration-options)). Load them from environment variables or a secrets manager — never hardcode them.
+
+```typescript
+// v2.x — keys were bundled, nothing to pass
+const verifier = new EveryCredVerifier(progressCallback, { isBlockchainVerificationEnabled: true });
+
+// v3.x — supply your own keys
+const verifier = new EveryCredVerifier(progressCallback, {
+  isBlockchainVerificationEnabled: true,
+  blockchainApiKeys: {
+    ethereum: process.env.ETHERSCAN_API_KEY,
+    polygon: process.env.POLYGONSCAN_API_KEY,
+  },
+});
+```
+
+No change is required for off-chain verification, or for SD JWT credentials without an `evidence` field (on-chain verification is skipped in those cases).
+
 ## Package Notes
 
-Version 2.0.0 of the EveryCRED Verifier JS to verify EveryCRED credentials according to the W3C credentials standard. The package now supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. 
+Version 3.0.0 of the EveryCRED Verifier JS verifies EveryCRED credentials according to the W3C credentials standard. The package supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. Blockchain explorer API keys are supplied by the consumer at runtime via `blockchainApiKeys` and are never bundled with the package. 
