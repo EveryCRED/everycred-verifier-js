@@ -3,7 +3,7 @@
 # EveryCRED Verifier JS
 
 [![Made by EveryCRED](https://img.shields.io/badge/Made%20by-EveryCRED-blue)](https://everycred.com)
-![Version](https://img.shields.io/badge/Version-2.0.0-blue)
+![Version](https://img.shields.io/badge/Version-3.0.0--beta.0-blue)
 
 [EveryCRED Verifier JS](https://www.npmjs.com/package/@viitorcloudtechnologies/everycred-verifier-js) is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -113,6 +113,7 @@ The EveryCRED Verifier JS offers off-chain verification capabilities in addition
     - **Online Mode**:
         - If the verifier is online, it will attempt to fetch the issuer profile and the revocation list from the provided URLs.
         - The fetched data is then used to check if the credential ID is listed in the revocation list.
+        - **Every issuer profile is expected to publish a `revocationList` URL.** If the URL is missing, or the list cannot be fetched (network error, non-JSON, empty response), verification **fails**. An empty `revokedAssertions: []` array is a valid response and is treated as "nothing revoked" — verification proceeds normally in that case. See [Migrating from v2.x to v3.0.0](#migrating-from-v2x-to-v300) below for details on this breaking change.
     - **Offline Mode**:
         - When the verifier is offline, it does not perform revocation checking.
         - Only the expiration dates (valid from and valid until) are verified against the local data.
@@ -169,7 +170,29 @@ const result = await verifier.verify(sdCredential);
 - **Evidence Field**: For SD JWT credentials, blockchain verification is decided automatically by the presence of an `evidence` field — if `evidence` is present, on-chain verification runs; if it is absent, on-chain verification is skipped. This auto-detection overrides any `isBlockchainVerificationEnabled` value passed in the configuration for this format.
 - **Signature Algorithm**: SD JWT credentials use RS256 algorithm for signature verification.
 
+## Issuer Profile Key Resolution (DID Documents)
+
+Starting in `3.0.0-beta.0`, the issuer's signing key is resolved from the issuer's **published profile**
+instead of being trusted directly from the credential/JWT:
+
+- If the issuer profile exposes a DID-document-style `verificationMethod[]` array (each entry carrying a
+  `publicKeyJwk`), the verifier resolves the correct entry using the credential's key reference (the SD-JWT
+  header `kid`, or the Ed25519 `proof.verificationMethod`) and uses **that** key to verify the signature.
+- The resolved key's `controller`/`id` DID is checked against the DID named in the credential's key
+  reference, so a credential cannot be verified against a key belonging to a different issuer DID.
+- The JWT `alg` header is cross-checked against the resolved key's type (EdDSA ↔ OKP/Ed25519, RS256 ↔ RSA);
+  a mismatch fails verification instead of trusting the header's declared algorithm.
+- Legacy issuer profiles (the `@context`/`type`/`publicKey[]` shape, or an embedded key on the credential
+  itself) remain supported as a fallback for issuers that have not migrated to DID documents.
+
+This closes a class of key-confusion issues where a credential's own header/proof could point at an
+arbitrary key rather than one actually published by the issuer.
+
 ## Migrating from v2.x to v3.0.0
+
+v3.0.0 introduces **two breaking changes**. Review both before upgrading.
+
+### 1. Blockchain explorer API keys are no longer bundled
 
 v3.0.0 removes the blockchain explorer API keys that were previously bundled with the package. To upgrade:
 
@@ -192,6 +215,28 @@ const verifier = new EveryCredVerifier(progressCallback, {
 
 No change is required for off-chain verification, or for SD JWT credentials without an `evidence` field (on-chain verification is skipped in those cases).
 
+### 2. Issuer profiles must publish a revocation list
+
+Previously, an issuer profile with no `revocationList` URL (or one that failed to fetch) was treated as
+"nothing to revoke against" and verification passed. **This leniency has been removed.**
+
+> **⚠️ Known consequence:** any issuer profile that does not publish a `revocationList` URL will now
+> **fail verification** until the issuer publishes one. This is an intentional product decision, but it is
+> a real behavioral change from `2.0.0` — if you verify credentials from issuers you do not control, confirm
+> they have published a revocation list (an empty `revokedAssertions: []` list is fine) before upgrading.
+
+| Scenario | v2.0.0 | v3.0.0-beta.0 |
+|---|---|---|
+| `revocationList` URL missing from issuer profile | Pass (nothing to check) | **Fail** |
+| `revocationList` URL present but unfetchable (network error, non-JSON, empty) | Pass | **Fail** (`REVOCATION_LIST_FETCH_ERROR`) |
+| `revocationList` fetched with `revokedAssertions: []` | Pass | Pass (unchanged) |
+| Credential ID present in `revokedAssertions` | Fail | Fail (unchanged) |
+
+No configuration change is required to adopt this — it is enforced automatically during revocation
+verification (see [Off-Chain Verification](#off-chain-verification) above).
+
 ## Package Notes
 
-Version 3.0.0 of the EveryCRED Verifier JS verifies EveryCRED credentials according to the W3C credentials standard. The package supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. Blockchain explorer API keys are supplied by the consumer at runtime via `blockchainApiKeys` and are never bundled with the package. 
+Version 3.0.0-beta.0 of the EveryCRED Verifier JS verifies EveryCRED credentials according to the W3C credentials standard. The package supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. Blockchain explorer API keys are supplied by the consumer at runtime via `blockchainApiKeys` and are never bundled with the package. Issuer signing keys are resolved from the issuer's published profile (DID document `verificationMethod`, with legacy formats supported as a fallback), and issuer profiles are now required to publish a revocation list for verification to succeed.
+
+> **Pre-release notice:** `3.0.0-beta.0` is the first pre-release of the 3.0.0 line, published to the npm `beta` dist-tag. It has not been merged into `main` and is not the `latest` stable release. See [RELEASE_NOTES_v3.0.0-beta.0.md](./RELEASE_NOTES_v3.0.0-beta.0.md) for full details.
