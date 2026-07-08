@@ -4,9 +4,2486 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EveryCRED Verifier</title>
+  <title>Credential Verifier</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  <script src="./dist/index.js"></script>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0E1A33 0%, #1F3D7A 50%, #0E1A33 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #0E1A33;
+      position: relative;
+    }
+
+    #particles-js {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      transition: filter 0.8s ease;
+    }
+
+    /* Success effect - brighter particles */
+    #particles-js.celebration {
+      filter: brightness(1.5);
+    }
+
+    /* Error effect - red tinted particles */
+    #particles-js.error-effect {
+      filter: brightness(1.3);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(14, 26, 51, 0.4);
+      overflow: hidden;
+      border: 1px solid rgba(197, 201, 210, 0.5);
+      position: relative;
+      z-index: 1;
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      background: transparent;
+      color: #0E1A33;
+      padding: 40px 30px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(31, 61, 122, 0.1);
+    }
+
+    .header-logo {
+      max-width: 140px;
+      height: auto;
+      opacity: 1;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .header-logo:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      .header-logo {
+        max-width: 100px;
+      }
+      
+      .header h1 {
+        font-size: 1.8em;
+      }
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin: 0;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1F3D7A 0%, #4CA3FF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: #6B7A99;
+      font-size: 1.1em;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .input-section {
+      margin-bottom: 30px;
+    }
+
+    .input-section label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #0E1A33;
+      font-size: 1.1em;
+    }
+
+    .json-input {
+      width: 100%;
+      min-height: 300px;
+      padding: 15px;
+      border: 2px solid #C5C9D2;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: vertical;
+      background: #FFFFFF;
+      color: #0E1A33;
+      transition: border-color 0.3s;
+    }
+
+    .json-input:focus {
+      outline: none;
+      border-color: #1F3D7A;
+      box-shadow: 0 0 0 3px rgba(31, 61, 122, 0.1);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 200px;
+      padding: 15px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: #1F3D7A;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(31, 61, 122, 0.4);
+      background: #0E1A33;
+    }
+
+    .btn-secondary {
+      background: #4CA3FF;
+      color: white;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(76, 163, 255, 0.4);
+      background: #1F3D7A;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #C5C9D2;
+    }
+
+    .btn-clear {
+      background: #6B7A99;
+      color: white;
+    }
+
+    .btn-clear:hover:not(:disabled) {
+      background: #1F3D7A;
+    }
+
+    .results-section {
+      margin-top: 30px;
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 16px;
+      padding: 0;
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(14, 26, 51, 0.08);
+    }
+
+    .result-card-header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .result-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .result-card.success .result-icon {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .result-card.error .result-icon {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    }
+
+    .result-card.loading .result-icon {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    .result-card.loading .result-header-text h3 {
+      color: #1d4ed8;
+    }
+
+    /* Loading animation for result card */
+    .result-loading-content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .verification-loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .loader-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loader-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .loader-dots span {
+      width: 10px;
+      height: 10px;
+      background: #3b82f6;
+      border-radius: 50%;
+      animation: bounce 1.4s ease-in-out infinite both;
+    }
+
+    .loader-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .loader-dots span:nth-child(2) { animation-delay: -0.16s; }
+    .loader-dots span:nth-child(3) { animation-delay: 0s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    .loader-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .loader-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      font-size: 0.9em;
+      color: #64748b;
+      transition: all 0.3s ease;
+    }
+
+    .loader-step.active {
+      border-color: #3b82f6;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      color: #1d4ed8;
+    }
+
+    .loader-step.completed {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      color: #059669;
+    }
+
+    .loader-step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .loader-step .loader-step-icon {
+      background: #e2e8f0;
+      color: #94a3b8;
+    }
+
+    .loader-step.active .loader-step-icon {
+      background: #3b82f6;
+      color: white;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .loader-step.completed .loader-step-icon {
+      background: #10b981;
+      color: white;
+    }
+
+    .loader-step-text {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .loader-step-status {
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .result-header-text {
+      flex: 1;
+    }
+
+    .result-header-text h3 {
+      margin: 0 0 4px 0;
+      font-size: 1.25em;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .result-card.success .result-header-text h3 {
+      color: #059669;
+    }
+
+    .result-card.error .result-header-text h3 {
+      color: #dc2626;
+    }
+
+    .result-header-text p {
+      margin: 0;
+      font-size: 0.9em;
+      color: #64748b;
+    }
+
+    .result-card-body {
+      padding: 20px 24px;
+    }
+
+    .result-detail {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: white;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .result-detail:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-detail-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 14px;
+      font-size: 16px;
+      background: #f1f5f9;
+    }
+
+    .result-detail-content {
+      flex: 1;
+    }
+
+    .result-detail-label {
+      font-size: 0.75em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .result-detail-value {
+      font-size: 0.95em;
+      color: #1e293b;
+      font-weight: 500;
+    }
+
+    .progress-section {
+      margin-top: 24px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(14, 26, 51, 0.08);
+    }
+
+    .progress-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .progress-section-header h3 {
+      margin: 0;
+      font-size: 1.1em;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .progress-count {
+      font-size: 0.85em;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .progress-timeline {
+      position: relative;
+    }
+
+    .progress-timeline::before {
+      content: '';
+      position: absolute;
+      left: 18px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #e2e8f0;
+    }
+
+    .progress-item {
+      position: relative;
+      padding: 16px 20px 16px 52px;
+      margin-bottom: 0;
+      border-radius: 12px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      animation: slideIn 0.3s ease forwards;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    
+    .progress-item:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transform: translateX(4px);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .progress-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .progress-item::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      border: 3px solid white;
+      box-shadow: 0 0 0 2px #e2e8f0;
+      z-index: 1;
+    }
+
+    .progress-item.success {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border-color: #86efac;
+    }
+
+    .progress-item.success::before {
+      background: #10b981;
+      box-shadow: 0 0 0 2px #10b981;
+    }
+
+    .progress-item.error {
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border-color: #fca5a5;
+    }
+
+    .progress-item.error::before {
+      background: #ef4444;
+      box-shadow: 0 0 0 2px #ef4444;
+    }
+
+    .progress-item.pending {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-color: #93c5fd;
+    }
+
+    .progress-item.pending::before {
+      background: #3b82f6;
+      box-shadow: 0 0 0 2px #3b82f6;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+      50% { transform: translateY(-50%) scale(1.2); opacity: 0.7; }
+    }
+
+    .progress-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .progress-step {
+      font-weight: 700;
+      font-size: 0.95em;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .progress-step-icon {
+      font-size: 1.2em;
+    }
+
+    .progress-step-name {
+      font-weight: 600;
+    }
+
+    .progress-step-number {
+      font-size: 0.75em;
+      color: #94a3b8;
+      font-weight: 500;
+      background: rgba(0, 0, 0, 0.04);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .progress-step-badge {
+      font-size: 0.65em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .progress-item.success .progress-step-badge {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .progress-item.error .progress-step-badge {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .progress-item.pending .progress-step-badge {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .progress-item-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .progress-data-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    .progress-data-label {
+      font-size: 0.7em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      min-width: 70px;
+      padding-top: 2px;
+    }
+
+    .progress-data-value {
+      font-size: 0.85em;
+      color: #1e293b;
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .progress-data-value code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+      color: #475569;
+    }
+
+    .progress-status-success {
+      color: #10b981 !important;
+      font-weight: 600;
+    }
+
+    .progress-status-error {
+      color: #ef4444 !important;
+      font-weight: 600;
+    }
+
+    .progress-status-pending {
+      color: #3b82f6 !important;
+      font-weight: 600;
+    }
+
+    .progress-reason-text {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .progress-title {
+      font-size: 0.85em;
+      color: #64748b;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .progress-reason {
+      font-size: 0.8em;
+      color: #94a3b8;
+      font-style: normal;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .progress-reason::before {
+      content: '→';
+      font-weight: bold;
+    }
+
+    .network-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border-radius: 10px;
+      color: #1e40af;
+      font-weight: 600;
+      font-size: 0.9em;
+      border: 1px solid #93c5fd;
+    }
+
+    .network-info::before {
+      content: '🔗';
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    .loading-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-top: 15px;
+      background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      border: 1px solid #fca5a5;
+      color: #991b1b;
+    }
+
+    .error-message::before {
+      content: '⚠️';
+      font-size: 1.2em;
+    }
+
+    .json-pretty {
+      background: #F5F7FA;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+      color: #0E1A33;
+      border: 1px solid #C5C9D2;
+    }
+
+    .field-section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #F5F7FA;
+      border-radius: 8px;
+      border-left: 4px solid #1F3D7A;
+      border: 1px solid #C5C9D2;
+    }
+
+    .field-label {
+      font-weight: 600;
+      color: #1F3D7A;
+      margin-bottom: 8px;
+      font-size: 1em;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field-value {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #0E1A33;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .field-value.json {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #C5C9D2;
+    }
+
+    .toggle-section {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+      gap: 10px;
+    }
+
+    .toggle-btn {
+      padding: 12px 24px;
+      border: 2px solid #1F3D7A;
+      background: white;
+      color: #1F3D7A;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .toggle-btn.active {
+      background: #1F3D7A;
+      color: white;
+      border-color: #1F3D7A;
+    }
+
+    .toggle-btn:hover:not(.active) {
+      background: #F5F7FA;
+      border-color: #4CA3FF;
+      color: #1F3D7A;
+    }
+
+    .verification-mode {
+      display: none;
+    }
+
+    .verification-mode.active {
+      display: block;
+    }
+
+    .jwt-input {
+      width: 100%;
+      min-height: 200px;
+      padding: 15px;
+      border: 2px solid #C5C9D2;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: vertical;
+      background: white;
+      color: #0E1A33;
+      transition: border-color 0.3s;
+    }
+
+    .jwt-input:focus {
+      outline: none;
+      border-color: #1F3D7A;
+      box-shadow: 0 0 0 3px rgba(31, 61, 122, 0.1);
+    }
+
+    .url-input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .url-input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 2px solid #C5C9D2;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #FFFFFF;
+      color: #0E1A33;
+      transition: border-color 0.3s;
+    }
+
+    .url-input:focus {
+      outline: none;
+      border-color: #1F3D7A;
+      box-shadow: 0 0 0 3px rgba(31, 61, 122, 0.1);
+    }
+
+    .url-input::placeholder {
+      color: #6B7A99;
+    }
+
+    .btn-fetch {
+      padding: 12px 24px;
+      background: #4CA3FF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .btn-fetch:hover:not(:disabled) {
+      background: #1F3D7A;
+      transform: translateY(-1px);
+    }
+
+    .btn-fetch:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background: #C5C9D2;
+    }
+
+    .btn-fetch.loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .btn-fetch.loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    .config-section {
+      margin-bottom: 30px;
+      background: #FFFFFF;
+      border-radius: 8px;
+      border: 1px solid #C5C9D2;
+      overflow: hidden;
+    }
+
+    .config-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      background: #0E1A33;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .config-header:hover {
+      background: #1F3D7A;
+    }
+
+    .config-header h3 {
+      margin: 0;
+      font-size: 1.1em;
+      font-weight: 600;
+    }
+
+    .config-toggle-icon {
+      font-size: 0.9em;
+      transition: transform 0.3s;
+    }
+
+    .config-section.collapsed .config-toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .config-content {
+      padding: 20px;
+      display: block;
+    }
+
+    .config-section.collapsed .config-content {
+      display: none;
+    }
+
+    .config-item {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .config-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .config-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+
+    .config-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: #1F3D7A;
+    }
+
+    .config-checkbox-label {
+      font-weight: 600;
+      color: #0E1A33;
+      font-size: 1em;
+    }
+
+    .config-description {
+      margin: 0;
+      margin-left: 32px;
+      color: #6B7A99;
+      font-size: 0.9em;
+      line-height: 1.4;
+    }
+
+    .config-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .btn-config-save,
+    .btn-config-clear {
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.95em;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+    }
+
+    .btn-config-save {
+      background: #1F3D7A;
+      color: white;
+    }
+
+    .btn-config-save:hover {
+      background: #0E1A33;
+      transform: translateY(-1px);
+    }
+
+    .btn-config-clear {
+      background: white;
+      color: #6B7A99;
+      border: 1px solid #C5C9D2;
+    }
+
+    .btn-config-clear:hover {
+      border-color: #ef4444;
+      color: #dc2626;
+    }
+
+    .config-status {
+      font-size: 0.85em;
+      font-weight: 600;
+      transition: opacity 0.3s;
+    }
+
+    .config-status.success {
+      color: #059669;
+    }
+
+    .config-status.info {
+      color: #6B7A99;
+    }
+  </style>
 </head>
 
+<body>
+  <div id="particles-js"></div>
+  <div class="container">
+    <div class="header">
+      <img src="https://raw.githubusercontent.com/EveryCRED/everycred-verifier-js/main/src/assets/images/image.png" alt="EveryCRED Logo" class="header-logo">
+      <h1>Credential Verifier</h1>
+      <p>Verify W3C Verifiable Credentials</p>
+    </div>
+
+    <div class="content">
+      <div class="toggle-section">
+        <button id="toggleRegular" class="toggle-btn">Regular Verification</button>
+        <button id="toggleSD" class="toggle-btn">SD Verification</button>
+        <button id="toggleDynamic" class="toggle-btn active">Dynamic Verification</button>
+      </div>
+
+      <!-- Configuration Section -->
+      <div class="config-section">
+        <div class="config-header" id="configHeader">
+          <h3>⚙️ Verification Configuration</h3>
+          <span class="config-toggle-icon" id="configToggleIcon">▼</span>
+        </div>
+        <div class="config-content" id="configContent">
+          <div class="config-item">
+            <label class="config-label">
+              <input type="checkbox" id="configOffChain" class="config-checkbox">
+              <span class="config-checkbox-label">Off-Chain Verification</span>
+            </label>
+            <p class="config-description">Perform verification without blockchain checks (faster but less secure)</p>
+          </div>
+          <div class="config-item">
+            <label class="config-label">
+              <input type="checkbox" id="configBlockchain" class="config-checkbox">
+              <span class="config-checkbox-label">Blockchain Verification Enabled</span>
+            </label>
+            <p class="config-description">Enable blockchain-based verification checks</p>
+          </div>
+          <div class="config-item">
+            <span class="config-checkbox-label">Blockchain Explorer API Keys</span>
+            <p class="config-description" style="margin-left: 0; margin-bottom: 12px;">
+              Required for on-chain verification (v3.0.0+ no longer bundles keys). Supply your own keys below.
+              Get them from <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">Etherscan</a> and
+              <a href="https://polygonscan.com/myapikey" target="_blank" rel="noopener">Polygonscan</a>.
+              Polygon Amoy needs no key.
+            </p>
+            <div class="input-section" style="margin-bottom: 12px;">
+              <label for="configEthereumKey" style="font-size: 0.9em;">Ethereum (Etherscan) API Key</label>
+              <input type="password" id="configEthereumKey" class="url-input" placeholder="Etherscan API key — used for ETH Mainnet, ETH Sepolia, Polygon Mainnet" autocomplete="off">
+            </div>
+            <div class="input-section">
+              <label for="configPolygonKey" style="font-size: 0.9em;">Polygon (Polygonscan) API Key</label>
+              <input type="password" id="configPolygonKey" class="url-input" placeholder="Polygonscan API key — used for Polygon Testnet" autocomplete="off">
+            </div>
+          </div>
+          <div class="config-item">
+            <label class="config-label">
+              <input type="checkbox" id="configLogDiagnostic" class="config-checkbox" checked>
+              <span class="config-checkbox-label">Log Diagnostic Steps</span>
+            </label>
+            <p class="config-description">Enable detailed diagnostic logging for verification steps</p>
+          </div>
+          <div class="config-item">
+            <div class="config-actions">
+              <button id="saveConfigBtn" type="button" class="btn-config-save">💾 Save Config</button>
+              <button id="clearConfigBtn" type="button" class="btn-config-clear">🗑️ Clear Saved Config</button>
+              <span id="configStatus" class="config-status" aria-live="polite"></span>
+            </div>
+            <p class="config-description" style="margin-left: 0;">
+              Saves the checkbox settings above to this browser's <code>localStorage</code> so they persist across reloads.
+              API keys are <strong>session-only</strong> — held in <code>sessionStorage</code> for this tab and cleared when you close it.
+              Clear wipes both.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regular Verification Mode -->
+      <div id="regularVerification" class="verification-mode">
+        <div class="input-section">
+          <label for="regularUrlInput">Fetch from URL:</label>
+          <div class="url-input-group">
+            <input type="url" id="regularUrlInput" class="url-input" placeholder="https://example.com/credential.json">
+            <button id="fetchRegularBtn" class="btn-fetch">Fetch</button>
+          </div>
+        </div>
+        <div class="input-section">
+          <label for="jsonInput">Or Enter Credential JSON:</label>
+          <textarea id="jsonInput" class="json-input" placeholder='Paste your credential JSON here, e.g.:
+{
+  "@context": ["https://www.w3.org/2018/credentials/v1"],
+  "type": ["VerifiableCredential"],
+  "id": "https://example.com/credentials/123",
+  "issuer": {
+    "id": "https://example.com/issuer",
+    "profile": "https://example.com/issuer/profile"
+  },
+  "issuanceDate": "2024-01-01T00:00:00Z",
+  "credentialSubject": {
+    "id": "https://example.com/subject",
+    "name": "John Doe"
+  },
+  "proof": {
+    "type": "MerkleProof2019",
+    "proofValue": "..."
+  }
+}'></textarea>
+        </div>
+        <div class="button-group">
+          <button id="verifyOnChain" class="btn btn-primary">
+            Verify On-Chain
+          </button>
+          <button id="verifyOffChain" class="btn btn-secondary">
+            Verify Off-Chain
+          </button>
+          <button id="clearBtn" class="btn btn-clear">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- SD Verification Mode -->
+      <div id="sdVerification" class="verification-mode">
+        <div class="input-section">
+          <label for="sdUrlInput">Fetch from URL:</label>
+          <div class="url-input-group">
+            <input type="url" id="sdUrlInput" class="url-input" placeholder="https://example.com/sd-credential.json">
+            <button id="fetchSDBtn" class="btn-fetch">Fetch</button>
+          </div>
+        </div>
+        <div class="input-section">
+          <label for="sdCredentialInput">Or Enter SD Credential JSON:</label>
+          <textarea id="sdCredentialInput" class="json-input">{
+            "format": "vc+ld+sd_jwt",
+            "credential": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRpZDpldnJjOmlzc3Vlcjpwb2x5Z29uX2Ftb3k6NWEzZTkzZmMtYzI2MS00YWNkLTk5ODYtZGYzNjJmZDFlZWM1Iy0tLS0tQkVHSU4gUFVCTElDIEtFWS0tLS0tXG5NSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXRUMnF1dVVydjdMRzQyb1kwSHAzZmFqbUVXK3QvdENyVzBzdzF4NHdFendqMXFhRnlUT2Q5Zks2MzMwMloxejBsSE5OOVdVdVQwcEFVdXRHNXFhQ2RBUDM5ZUUyVFR0YXcwaGw0UjNIdjFtVHlUUnRUODdHSi9yRGxZSkI3eUxhV0pkTjBYYWRaWUJkeVhyalRQMU5jamhvZTlUVkFMTkRvb0Y0TkM1NVdTZWFVcVhKNFNGNmNraG02MytsaGtDYlZVTS95SXE1VnEwanZWRmlsb1I2VytOVExzM1BYMnVuMXdFbyticDYzL01CcVZvbXFKa2hsRUpzT2gxdTduSUlQUDJ3YzE1Y0pvUjBPSmZTUXdaMm5YK1lpYmlJTHY1bUR2RjJ4ZmZLWWVEbGxTUEhGTUNrL3p0QTl5b3lTWE1XdU00QitrcUVjKzRTV2dBWkVZU1JCd0lEQVFBQlxuLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tIn0.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL3czaWQub3JnL2V2ZXJ5Y3JlZC92MSIsImh0dHBzOi8vd3d3LnczLm9yZy8yMDE4L2NyZWRlbnRpYWxzL2V4YW1wbGVzL3YxIl0sInR5cGUiOlsiVmVyaWZpYWJsZUNyZWRlbnRpYWwiLCJFdmVyeUNSRURDcmVkZW50aWFsIl0sImlzc3VlciI6eyJpZCI6ImRpZDpldnJjOmlzc3Vlcjpwb2x5Z29uX2Ftb3k6NWEzZTkzZmMtYzI2MS00YWNkLTk5ODYtZGYzNjJmZDFlZWM1IiwicHJvZmlsZSI6Imh0dHBzOi8vc3BpcmEuZXZlcnljcmVkLmNvbS9pc3N1ZXIvcHJvZmlsZXMvMS9PZmZpY2VvZnRoZUNvbW1pc3Npb25lcm9mUG9saWNlLE5hdmlNdW1iYWk1YTNlOTNmYy1jMjYxLTRhY2QtOTk4Ni1kZjM2MmZkMWVlYzUuanNvbiJ9LCJpc3N1YW5jZURhdGUiOiIyMDI1LTExLTIwVDA4OjM5OjI4WiIsImlkIjoidXJuOnV1aWQ6ZTM3Mjg4ZTgtNmJhOC00OTkyLTkzNDUtMzIzZmI4NjE2ZGQ5IiwiaG9sZGVyIjp7ImlkIjoiZGlkOmV2cmM6aG9sZGVyOmQ0MzE1ZmE2LTA1MTktNDM0Mi05Yzc5LWYxZjM5ODM5N2I0YSIsInByb2ZpbGUiOiJodHRwczovL3NwaXJhLmV2ZXJ5Y3JlZC5jb20vaG9sZGVyL3Byb2ZpbGVzL2RpZDpldnJjOmhvbGRlcjpkNDMxNWZhNi0wNTE5LTQzNDItOWM3OS1mMWYzOTgzOTdiNGEuanNvbiJ9LCJjcmVkZW50aWFsU3ViamVjdCI6eyJpZCI6ImRpZDpldnJjOnN1YmplY3Q6NWEwYWI4OTMtNDYwYS00MzIxLThmNmUtM2E1MzhiZjVkOWM3IiwicHJvZmlsZSI6Imh0dHBzOi8vc3BpcmEuZXZlcnljcmVkLmNvbS9zdWJqZWN0L3Byb2ZpbGVzLzEvQXJtTGljZW5zZTVhMGFiODkzLTQ2MGEtNDMyMS04ZjZlLTNhNTM4YmY1ZDljNy5qc29uIiwiX3NkIjpbIjhpb1dRbWVVVFBwd3A3U2FJTFlpUG0wTGhDSFZNTGxXZmdYLWRpU3JwS1EiLCJsOXY0enJITzA2a2x2YkdwYVcyQTZoRmpMY3VJQ2tja0YyZkhwYUZzbFJjIiwiVG13SDh2VUxEU3hCX1g0NDFPbzJaSjJjYi05ZlRheE5GckVFSWZqTC1oRSIsIkd3eG1FcjQxQW9hUldLdW0tYXJ3cFVmd290a2xfdGMwdURMMkZqaU1KOGMiLCJPM3VMeHM5ZGZmVFBhU0d4cjZ1eC1TOW8tLXFxeTZRa2U5Rkw2Vkk1MXhNIiwidy1xRjRiaDVDVEVjVUM5OC05NDNkRFBTenpWTFRWT09iemRudUl6MjFTWSIsIlNRalFoQkRnSXVVUlJOdG11S0V2ZmFEcmxHX2tRVVQ5TFBoZ19YUEtGZTAiLCIyV3FMYUZCR2xDM2liMDBVcEpWOEFGNXZHd3ZuZDVMRmxJdFpKR3dERy1RIiwiUmZFSk5wWU1EWkVuVnJrV1ZOVTF5b1M3RzUxcFA1VGRzWXlETDdVUWFqYyIsIjFqX25RQVNyZnRUQjc0Y1d4MGhsZ0RLd1JfVHJXVUdfQWV2WkhYNUhCZEEiLCJfRlB4MDc3M2EtamNHdjhXNEd2cUdqUVBYWmZoWnpJZ0ZVcFUxdnk4c1RRIiwidS1vMFdGWlIxclpKYzd1UlBtQ2hNeTVnU181dmdFZ0sxRC1oU0ZqU1UzcyIsImhwZjFpR3dtaWJtT1hmRFV3MDN3ckw5eGtpbXMxOGR0ejh1MHk3NXFfaUkiLCJEcFNwdE1lUkZOYkgwNUJBNnNEdDBQOUtESTdxby11djdWbk9JdVNyZmY0IiwiM0RyOUw2TlE4eXRYdmgtTl9FdHdDUjBUMHRoWUxKSzc1TjB0WDlvZ2YtdyIsIkRGcGhFS0JlaXBvMHN1U2dKRC1nV251cTZJY1ZfT3prWDEydWRBTXBBcWMiLCJOSkNGRHdtU3RMMmRfWFhUalBMQ24zdzJUM0drWE9KZmdzWTlTVE5MY0VBIiwiQjY5b1cxNExyUGtGdHlLbUd0S1dlRWcyclRjRW1kcllIWDUyVHNxNGt6OCIsInBhMGd5SENrbko2U2lkRVd5ZzhKVFg4TmdjLXNZZW5WTnJKWmd2cndmeGsiXSwiX3NkX2FsZyI6InNoYS0yNTYifSwiZXZpZGVuY2UiOlt7InR5cGUiOiJNZXJrbGVQcm9vZjIwMTkiLCJwYXRoIjpbXSwibWVya2xlUm9vdCI6ImIwZTRmZWJjZmE4NDY4MTZmZjMxYzU0NTZlNjA5ODNjNGZkYTNkMTg4MzJjYjg5ZDk0YWZiMzA5YjY5MWRhMzMiLCJ0YXJnZXRIYXNoIjoiYjBlNGZlYmNmYTg0NjgxNmZmMzFjNTQ1NmU2MDk4M2M0ZmRhM2QxODgzMmNiODlkOTRhZmIzMDliNjkxZGEzMyIsImFuY2hvcnMiOlsiYmxpbms6cG9seTphbW95OjB4NWUzYjdhYmViM2Y2ZDZiZGFlOTM1Njk2ZDc1NGQwNTYyY2FkYzlmMWYyMzhmMDg0NDI4ZTEyYjM4NmQ0YWUwMSJdfV0sImlhdCI6MTc2MzYyNzk2OX0.dVXy2I8CqJw0kqx7N8kr3dsaVuUR2uY4we-3Epyc1Ygh6TXbnNVulYIi43vmN8ZgwZldq4bjo3Bk6jd1ma-djSJKMPQ5pZMat80csu3gpMVUe-Sc8pcdrfDPH98zUtM9q5O7j1Ay0rt4xvQcU4Dg4GaVkCXxt_2M7gmTZrjzBBV_8IIMdxT21eTY4c8kpdVRs8ezoWWBirulXycW0Ntp3cGmLyeSfNtUwfsD98-QK948XSRWZk4U6KuZbgLkDFqp1AhgiSAbQXMY5J-wAIbd_Bu5Lg2OD8kNA37-Lu448VH0ydpZCKDP9QAwUp3KeeSTNjcm2FmW1B98fNGbqPTtjQ~WyJhbDZzd0dCdGFPRSIsIm5hbWUiLCJNYW5pbCBKYXlzd2FsIl0~WyIyTGE0R2tlSk0wSSIsImVtYWlsIiwibWFuaWwuamF5c3dhbEB2aWl0b3IuY2xvdWQiXQ~WyJubXBuVV9NQUVHNCIsImFhZGhhYXJfbnVtYmVyIiwiMzkwOTgxNTg2MjYyIl0~WyJOb0pkMkpaeUVKVSIsImlzc3VpbmdfYXV0aG9yaXR5Iiwib2ZmaWNlIG9mIHRoZSBubXAiXQ~WyJIRHNySjE1TFpzayIsInVpbiIsIjQ3ODQ2NTQ4NCJd~WyJEMk8xNUZqeUprRSIsImZhdGhlcl9hbmRfc3BvdXNlX25hbWUiLCJQaW5ha2luIEpheXN3YWwiXQ~WyJaZXg3OVdJeWQtTSIsInByZXNlbnRfYWRkcmVzcyIsIjEvc2Fydm9kYXkgc29jaWV0eSJd~WyJ6ZFNidkVQbjZacyIsImxpY2Vuc2VfbnVtYmVyIiwiZmRmZC9mZGYvMTIzIl0~WyJWZEQwSENYRHJMMCIsInZhbGlkaXR5X3VwX3RvIiwiMjEtMTEtMjAyNSJd~WyJtTlMwYjFCQlNuNCIsImFyZWFfdmFsaWRpdHlfYW5kX2Rlc2NyaXB0aW9uIiwiR3VqYXJhdCJd~WyJoRDM4UUcxd25XWSIsImNhdGVnb3J5X2FuZF9saWNlbnNlX3JldGFpbiIsIlRlc3QgR3VuIl0~WyJqZVNqTEllQUUzWSIsIm51bWJlcl9vZl93ZWFwb25zIiwiMSJd~WyJXMXJ6WXVJXzhYNCIsInJldGFpbmVyX25hbWUiLCJOSUwiXQ~WyJReHJOYUhLQllNVSIsImFkZGl0aW9uYWxfbGljZW5zZWVfbmFtZSIsIk5JTCJd~WyI4MFpqSFZyTkM2MCIsInBob3RvIiwiaHR0cHM6Ly9zcGlyYS5ldmVyeWNyZWQuY29tL21lZGlhL3JlY29yZF9pbWFnZS8xLzVjMDU2OTc4LWFkNjUtNDVkMi1iYWY1LWZkOGFmNzFiOWZjYS5qcGciXQ~WyIyZXA5ZHFlQ0JvNCIsImNhdGVnb3J5XzEiLCJUZXN0IEd1biJd~WyJnV244aW1UazJmayIsImJvcmVfMSIsIlRlc3QgYm9yZSAxIl0~WyJBVG5GMUZRaFlsSSIsIndlYXBvbl8xX251bWJlciIsIndlYXBvbjEyIl0~WyJMbmtUMEZPUmV4VSIsIm9uZV90aW1lX2FuZF95ZWFybHlfYW1tdW5pdGlvbl9kZXRhaWxzX2Zvcl93ZWFwb24xIiwiMSB5ZWFyIl0",
+            "disclosures": [
+            "WyJhbDZzd0dCdGFPRSIsIm5hbWUiLCJNYW5pbCBKYXlzd2FsIl0",
+            "WyIyTGE0R2tlSk0wSSIsImVtYWlsIiwibWFuaWwuamF5c3dhbEB2aWl0b3IuY2xvdWQiXQ",
+            "WyJubXBuVV9NQUVHNCIsImFhZGhhYXJfbnVtYmVyIiwiMzkwOTgxNTg2MjYyIl0",
+            "WyJOb0pkMkpaeUVKVSIsImlzc3VpbmdfYXV0aG9yaXR5Iiwib2ZmaWNlIG9mIHRoZSBubXAiXQ",
+            "WyJIRHNySjE1TFpzayIsInVpbiIsIjQ3ODQ2NTQ4NCJd",
+            "WyJEMk8xNUZqeUprRSIsImZhdGhlcl9hbmRfc3BvdXNlX25hbWUiLCJQaW5ha2luIEpheXN3YWwiXQ",
+            "WyJaZXg3OVdJeWQtTSIsInByZXNlbnRfYWRkcmVzcyIsIjEvc2Fydm9kYXkgc29jaWV0eSJd",
+            "WyJ6ZFNidkVQbjZacyIsImxpY2Vuc2VfbnVtYmVyIiwiZmRmZC9mZGYvMTIzIl0",
+            "WyJWZEQwSENYRHJMMCIsInZhbGlkaXR5X3VwX3RvIiwiMjEtMTEtMjAyNSJd",
+            "WyJtTlMwYjFCQlNuNCIsImFyZWFfdmFsaWRpdHlfYW5kX2Rlc2NyaXB0aW9uIiwiR3VqYXJhdCJd",
+            "WyJoRDM4UUcxd25XWSIsImNhdGVnb3J5X2FuZF9saWNlbnNlX3JldGFpbiIsIlRlc3QgR3VuIl0",
+            "WyJqZVNqTEllQUUzWSIsIm51bWJlcl9vZl93ZWFwb25zIiwiMSJd",
+            "WyJXMXJ6WXVJXzhYNCIsInJldGFpbmVyX25hbWUiLCJOSUwiXQ",
+            "WyJReHJOYUhLQllNVSIsImFkZGl0aW9uYWxfbGljZW5zZWVfbmFtZSIsIk5JTCJd",
+            "WyI4MFpqSFZyTkM2MCIsInBob3RvIiwiaHR0cHM6Ly9zcGlyYS5ldmVyeWNyZWQuY29tL21lZGlhL3JlY29yZF9pbWFnZS8xLzVjMDU2OTc4LWFkNjUtNDVkMi1iYWY1LWZkOGFmNzFiOWZjYS5qcGciXQ",
+            "WyIyZXA5ZHFlQ0JvNCIsImNhdGVnb3J5XzEiLCJUZXN0IEd1biJd",
+            "WyJnV244aW1UazJmayIsImJvcmVfMSIsIlRlc3QgYm9yZSAxIl0",
+            "WyJBVG5GMUZRaFlsSSIsIndlYXBvbl8xX251bWJlciIsIndlYXBvbjEyIl0",
+            "WyJMbmtUMEZPUmV4VSIsIm9uZV90aW1lX2FuZF95ZWFybHlfYW1tdW5pdGlvbl9kZXRhaWxzX2Zvcl93ZWFwb24xIiwiMSB5ZWFyIl0"
+            ],
+            "issuer": "did:evrc:issuer:polygon_amoy:5a3e93fc-c261-4acd-9986-df362fd1eec5",
+            "issued_at": "2025-11-20T08:39:28Z"
+            }</textarea>
+        </div>
+
+        <div class="button-group">
+          <button id="verifySDBtn" class="btn btn-primary">
+            Verify SD Credential
+          </button>
+          <button id="clearSDBtn" class="btn btn-clear">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Verification Mode -->
+      <div id="dynamicVerification" class="verification-mode active">
+        <div class="input-section">
+          <label for="dynamicUrlInput">Fetch from URL:</label>
+          <div class="url-input-group">
+            <input type="url" id="dynamicUrlInput" class="url-input" placeholder="https://example.com/credential.json">
+            <button id="fetchDynamicBtn" class="btn-fetch">Fetch</button>
+          </div>
+        </div>
+        <div class="input-section">
+          <label for="dynamicCredentialInput">Or Enter Credential JSON (Auto-detects format):</label>
+          <textarea id="dynamicCredentialInput" class="json-input" placeholder='Paste your credential JSON here. Supports both SD JWT and Ed25519 formats:
+{
+  "@context": ["https://www.w3.org/2018/credentials/v1"],
+  "type": ["VerifiableCredential"],
+  "id": "https://example.com/credentials/123",
+  "issuer": {
+    "id": "https://example.com/issuer",
+    "profile": "https://example.com/issuer/profile"
+  },
+  "issuanceDate": "2024-01-01T00:00:00Z",
+  "credentialSubject": {
+    "id": "https://example.com/subject",
+    "name": "John Doe"
+  },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "proofValue": "..."
+  }
+}
+
+OR SD JWT format:
+{
+  "format": "vc+ld+sd_jwt",
+  "credential": "...",
+  "disclosures": [...]
+}'></textarea>
+        </div>
+
+        <div class="button-group">
+          <button id="verifyDynamicBtn" class="btn btn-primary">
+            Verify Credential (Dynamic)
+          </button>
+          <button id="clearDynamicBtn" class="btn btn-clear">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+      <div id="resultsSection" class="results-section" style="display: none;">
+        <div id="resultCard" class="result-card">
+          <div class="result-card-header">
+            <div class="result-icon" id="resultIcon">✓</div>
+            <div class="result-header-text">
+              <h3 id="resultTitle">Verification Result</h3>
+              <p id="resultSubtitle">Processing your credential...</p>
+            </div>
+          </div>
+          <div class="result-card-body">
+            <div id="resultDetails"></div>
+          <div id="networkInfo" class="network-info" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="progressSection" class="progress-section" style="display: none;">
+        <div class="progress-section-header">
+          <h3>📋 Verification Progress</h3>
+          <span id="progressCount" class="progress-count"></span>
+        </div>
+        <div class="progress-timeline">
+        <div id="progressList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <script src="./dist/index.bundle.js"></script>
+  <script>
+    // Initialize particles.js
+    particlesJS('particles-js', {
+      particles: {
+        number: {
+          value: 120,
+          density: {
+            enable: true,
+            value_area: 700
+          }
+        },
+        color: {
+          value: ['#4CA3FF', '#FFFFFF', '#6B7A99']
+        },
+        shape: {
+          type: 'circle',
+          stroke: {
+            width: 0,
+            color: '#000000'
+          }
+        },
+        opacity: {
+          value: 0.6,
+          random: true,
+          anim: {
+            enable: true,
+            speed: 1,
+            opacity_min: 0.1,
+            sync: false
+          }
+        },
+        size: {
+          value: 3,
+          random: true,
+          anim: {
+            enable: true,
+            speed: 2,
+            size_min: 0.5,
+            sync: false
+          }
+        },
+        line_linked: {
+          enable: true,
+          distance: 150,
+          color: '#4CA3FF',
+          opacity: 0.3,
+          width: 1
+        },
+        move: {
+          enable: true,
+          speed: 3,
+          direction: 'none',
+          random: true,
+          straight: false,
+          out_mode: 'out',
+          bounce: false,
+          attract: {
+            enable: true,
+            rotateX: 600,
+            rotateY: 1200
+          }
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: {
+            enable: true,
+            mode: ['grab', 'bubble']
+          },
+          onclick: {
+            enable: true,
+            mode: 'repulse'
+          },
+          resize: true
+        },
+        modes: {
+          grab: {
+            distance: 200,
+            line_linked: {
+              opacity: 1
+            }
+          },
+          bubble: {
+            distance: 250,
+            size: 6,
+            duration: 2,
+            opacity: 0.8,
+            speed: 3
+          },
+          push: {
+            particles_nb: 6
+          },
+          repulse: {
+            distance: 300,
+            duration: 0.8
+          },
+          remove: {
+            particles_nb: 2
+          }
+        }
+      },
+      retina_detect: true
+    });
+  </script>
+  <script>
+    // Get the library from UMD export
+    let EveryCredVerifierClass = null;
+    let JsonWebSignatureVerifierClass = null;
+    let Ed25519CredentialVerifierClass = null;
+    
+    if (window.EveryCredVerifier !== undefined) {
+      // Access exports from the UMD bundle
+      EveryCredVerifierClass = window.EveryCredVerifier.EveryCredVerifier;
+      JsonWebSignatureVerifierClass = window.EveryCredVerifier.JsonWebSignatureVerifier;
+      Ed25519CredentialVerifierClass = window.EveryCredVerifier.Ed25519CredentialVerifier;
+    } else {
+      const errorMsg = document.getElementById('errorMessage');
+      errorMsg.textContent = 'Error: EveryCredVerifier library not loaded. Please build the library first using: npm run build-dev';
+      errorMsg.style.display = 'block';
+    }
+
+    // Toggle elements
+    const toggleRegularBtn = document.getElementById('toggleRegular');
+    const toggleSDBtn = document.getElementById('toggleSD');
+    const toggleDynamicBtn = document.getElementById('toggleDynamic');
+    const regularVerification = document.getElementById('regularVerification');
+    const sdVerification = document.getElementById('sdVerification');
+    const dynamicVerification = document.getElementById('dynamicVerification');
+
+    // Regular verification elements
+    const jsonInput = document.getElementById('jsonInput');
+    const verifyOnChainBtn = document.getElementById('verifyOnChain');
+    const verifyOffChainBtn = document.getElementById('verifyOffChain');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // SD verification elements
+    const sdCredentialInput = document.getElementById('sdCredentialInput');
+    const verifySDBtn = document.getElementById('verifySDBtn');
+    const clearSDBtn = document.getElementById('clearSDBtn');
+    const sdUrlInput = document.getElementById('sdUrlInput');
+    const fetchSDBtn = document.getElementById('fetchSDBtn');
+
+    // Dynamic verification elements
+    const dynamicCredentialInput = document.getElementById('dynamicCredentialInput');
+    const verifyDynamicBtn = document.getElementById('verifyDynamicBtn');
+    const clearDynamicBtn = document.getElementById('clearDynamicBtn');
+    const dynamicUrlInput = document.getElementById('dynamicUrlInput');
+    const fetchDynamicBtn = document.getElementById('fetchDynamicBtn');
+
+    // Regular verification URL elements
+    const regularUrlInput = document.getElementById('regularUrlInput');
+    const fetchRegularBtn = document.getElementById('fetchRegularBtn');
+
+    // Common elements
+    const resultsSection = document.getElementById('resultsSection');
+    const resultCard = document.getElementById('resultCard');
+    const resultIcon = document.getElementById('resultIcon');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultSubtitle = document.getElementById('resultSubtitle');
+    const resultDetails = document.getElementById('resultDetails');
+    const networkInfo = document.getElementById('networkInfo');
+    const progressSection = document.getElementById('progressSection');
+    const progressList = document.getElementById('progressList');
+    const progressCount = document.getElementById('progressCount');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Config elements
+    const configSection = document.querySelector('.config-section');
+    const configHeader = document.getElementById('configHeader');
+    const configOffChain = document.getElementById('configOffChain');
+    const configBlockchain = document.getElementById('configBlockchain');
+    const configLogDiagnostic = document.getElementById('configLogDiagnostic');
+    const configEthereumKey = document.getElementById('configEthereumKey');
+    const configPolygonKey = document.getElementById('configPolygonKey');
+    const saveConfigBtn = document.getElementById('saveConfigBtn');
+    const clearConfigBtn = document.getElementById('clearConfigBtn');
+    const configStatus = document.getElementById('configStatus');
+
+    // Persistent checkbox prefs live in localStorage; API keys are session-only
+    // (sessionStorage) so they survive reloads within the tab but never persist.
+    const CONFIG_STORAGE_KEY = 'everycred-verifier-config';
+    const API_KEYS_SESSION_KEY = 'everycred-verifier-api-keys';
+
+    let progressItems = {};
+
+    // Get current config from UI (excluding logDiagnosticStep as it's handled in UI)
+    function getConfig() {
+      const config = {
+        offChainVerification: configOffChain.checked,
+        isBlockchainVerificationEnabled: configBlockchain.checked
+        // Note: logDiagnosticStep is NOT passed to library - it would replace the callback
+        // Instead, we handle diagnostic logging in our progressCallback below
+      };
+
+      // Blockchain explorer API keys (v3.0.0+): supplied at runtime, never bundled.
+      // Only include keys the user actually entered.
+      const ethereumKey = configEthereumKey.value.trim();
+      const polygonKey = configPolygonKey.value.trim();
+      const blockchainApiKeys = {};
+      if (ethereumKey) blockchainApiKeys.ethereum = ethereumKey;
+      if (polygonKey) blockchainApiKeys.polygon = polygonKey;
+      if (Object.keys(blockchainApiKeys).length > 0) {
+        config.blockchainApiKeys = blockchainApiKeys;
+      }
+
+      return config;
+    }
+
+    // Toggle config section
+    configHeader.addEventListener('click', () => {
+      configSection.classList.toggle('collapsed');
+    });
+
+    // Show a transient status message next to the config buttons
+    let configStatusTimer = null;
+    function showConfigStatus(message, type = 'success') {
+      configStatus.textContent = message;
+      configStatus.className = `config-status ${type}`;
+      if (configStatusTimer) clearTimeout(configStatusTimer);
+      configStatusTimer = setTimeout(() => {
+        configStatus.textContent = '';
+        configStatus.className = 'config-status';
+      }, 3000);
+    }
+
+    // Persist only the checkbox prefs to localStorage. API keys are NOT saved here —
+    // they are kept session-only (see syncApiKeysToSession).
+    function saveConfig() {
+      const data = {
+        offChainVerification: configOffChain.checked,
+        isBlockchainVerificationEnabled: configBlockchain.checked,
+        logDiagnosticStep: configLogDiagnostic.checked
+      };
+      try {
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data));
+        showConfigStatus('✓ Config saved', 'success');
+      } catch (err) {
+        console.error('Failed to save config:', err);
+        showConfigStatus('✗ Could not save config', 'info');
+      }
+    }
+
+    // Mirror the API keys into sessionStorage so they survive reloads within this
+    // tab session. sessionStorage is cleared automatically when the tab is closed.
+    function syncApiKeysToSession() {
+      try {
+        sessionStorage.setItem(API_KEYS_SESSION_KEY, JSON.stringify({
+          ethereum: configEthereumKey.value.trim(),
+          polygon: configPolygonKey.value.trim()
+        }));
+      } catch (err) {
+        console.error('Failed to persist API keys to session:', err);
+      }
+    }
+
+    // Restore checkbox prefs (localStorage) and session API keys (sessionStorage)
+    // into the UI. Called once on page load.
+    function loadConfig() {
+      // Checkbox prefs from localStorage
+      try {
+        const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (typeof data.offChainVerification === 'boolean') configOffChain.checked = data.offChainVerification;
+          if (typeof data.isBlockchainVerificationEnabled === 'boolean') configBlockchain.checked = data.isBlockchainVerificationEnabled;
+          if (typeof data.logDiagnosticStep === 'boolean') configLogDiagnostic.checked = data.logDiagnosticStep;
+        }
+      } catch (err) {
+        console.error('Saved config is corrupt, ignoring:', err);
+      }
+
+      // Session-only API keys from sessionStorage
+      try {
+        const rawKeys = sessionStorage.getItem(API_KEYS_SESSION_KEY);
+        if (rawKeys) {
+          const keys = JSON.parse(rawKeys);
+          configEthereumKey.value = keys.ethereum || '';
+          configPolygonKey.value = keys.polygon || '';
+        }
+      } catch (err) {
+        console.error('Session API keys are corrupt, ignoring:', err);
+      }
+    }
+
+    // Remove the persisted checkbox prefs and the session API keys, and reset key inputs.
+    function clearSavedConfig() {
+      try {
+        localStorage.removeItem(CONFIG_STORAGE_KEY);
+        sessionStorage.removeItem(API_KEYS_SESSION_KEY);
+      } catch (err) {
+        console.error('Failed to clear saved config:', err);
+      }
+      configEthereumKey.value = '';
+      configPolygonKey.value = '';
+      showConfigStatus('✓ Saved config cleared', 'info');
+    }
+
+    saveConfigBtn.addEventListener('click', saveConfig);
+    clearConfigBtn.addEventListener('click', clearSavedConfig);
+
+    // Keep session API keys in sync as the user types
+    configEthereumKey.addEventListener('input', syncApiKeysToSession);
+    configPolygonKey.addEventListener('input', syncApiKeysToSession);
+
+    // Restore any previously saved config as soon as the page loads
+    loadConfig();
+
+    // Progress callback function
+    const progressCallback = (step, title, status, reason) => {
+      // Log to console if diagnostic logging is enabled
+      if (configLogDiagnostic.checked) {
+        console.log('📋 Diagnostic Step:', { step, title, status, reason });
+        console.table({ Step: step, Title: title, Status: status, Reason: reason });
+      }
+      
+      if (!progressItems[step]) {
+        progressItems[step] = {
+          step: step,
+          title: title,
+          status: status,
+          reason: reason,
+          timestamp: Date.now(),
+          index: Object.keys(progressItems).length + 1
+        };
+      } else {
+        progressItems[step].status = status;
+        progressItems[step].reason = reason;
+        progressItems[step].title = title;
+      }
+
+      updateProgressDisplay();
+    };
+
+    // Format step name for display
+    function formatStepName(step) {
+      // Convert camelCase to Title Case with spaces
+      return step
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+    }
+
+    // Get icon for step type
+    function getStepIcon(step) {
+      const iconMap = {
+        'verification': '🔐',
+        'validateCredentials': '📋',
+        'validateCredential': '📄',
+        'validateCredentialType': '🏷️',
+        'validateCredentialContext': '🔗',
+        'validateCredentialID': '🆔',
+        'validateIssuer': '🏢',
+        'validateCredentialSubject': '👤',
+        'validateCredentialProof': '✍️',
+        'validateCredentialIssuanceDate': '📅',
+        'validateIssuerCredentials': '🎫',
+        'validateCredentialIssuer': '🏛️',
+        'validateIssuerProfileContext': '🌐',
+        'validateIssuerCredentialType': '📑',
+        'validateIssuerProfileID': '🪪',
+        'validateIssuerProfileName': '📛',
+        'validateIssuerProfileEmail': '📧',
+        'validateIssuerProfileRevocationList': '📜',
+        'validateIssuerProfilePublicKey': '🔑',
+        'validateRevocationListFromIssuerProfile': '🚫',
+        'dataIntegrityCheck': '🛡️',
+        'getNormalizedDecodedData': '📊',
+        'checkDecodedAnchors': '⚓',
+        'checkDecodedPath': '🛤️',
+        'checkDecodedMerkleRoot': '🌳',
+        'checkDecodedTargetHash': '#️⃣',
+        'fetchDataFromBlockchainAPI': '⛓️',
+        'verifyMerkleProof': '🔍',
+        'verifyTargetHash': '🎯',
+        'revocationStatusCheck': '🚦',
+        'checkRevocationContext': '📌',
+        'checkRevocationType': '🔖',
+        'checkRevocationID': '🔢',
+        'checkRevocationIssuer': '🏦',
+        'checkRevocationRevokedAssertions': '⛔',
+        'checkValidUntilDate': '⏰',
+        'checkValidFromDate': '🗓️',
+        'validateSDCredential': '🎴',
+        'validateSDCredentialFormatAndStructure': '🧱',
+        'validateSDCredentialJwtToken': '🎟️',
+        'validateSDCredentialEvidence': '📎',
+        'validateSDCredentialNormalizedJwt': '🔧'
+      };
+      return iconMap[step] || '📋';
+    }
+
+    function updateProgressDisplay() {
+      const items = Object.values(progressItems).sort((a, b) => a.timestamp - b.timestamp);
+      const successCount = items.filter(i => i.status === true).length;
+      const errorCount = items.filter(i => i.status === false).length;
+      const pendingCount = items.filter(i => i.status !== true && i.status !== false).length;
+      const totalCount = items.length;
+      
+      // Update progress count with more details
+      let countHTML = `<span style="color: #10b981;">✓ ${successCount} passed</span>`;
+      if (errorCount > 0) {
+        countHTML += `<span style="color: #ef4444; margin-left: 12px;">✗ ${errorCount} failed</span>`;
+      }
+      if (pendingCount > 0) {
+        countHTML += `<span style="color: #3b82f6; margin-left: 12px;">○ ${pendingCount} pending</span>`;
+      }
+      countHTML += `<span style="color: #64748b; margin-left: 12px;">/ ${totalCount} total</span>`;
+      progressCount.innerHTML = countHTML;
+      
+      progressList.innerHTML = '';
+      
+      for (const item of items) {
+        const statusClass = item.status === true ? 'success' : item.status === false ? 'error' : 'pending';
+        const statusIcon = item.status === true ? '✓' : item.status === false ? '✗' : '○';
+        const statusLabel = item.status === true ? 'Passed' : item.status === false ? 'Failed' : 'Pending';
+        const stepIcon = getStepIcon(item.step);
+        const formattedStep = formatStepName(item.step);
+        
+        const div = document.createElement('div');
+        div.className = `progress-item ${statusClass}`;
+        div.style.animationDelay = `${item.index * 0.05}s`;
+        
+        div.innerHTML = `
+          <div class="progress-item-header">
+            <div class="progress-step">
+              <span class="progress-step-icon">${stepIcon}</span>
+              <span class="progress-step-name">${formattedStep}</span>
+              <span class="progress-step-badge">${statusLabel}</span>
+            </div>
+            <span class="progress-step-number">#${item.index}</span>
+          </div>
+          <div class="progress-item-body">
+            <div class="progress-data-row">
+              <span class="progress-data-label">Step ID</span>
+              <span class="progress-data-value"><code>${item.step}</code></span>
+            </div>
+            <div class="progress-data-row">
+              <span class="progress-data-label">Title</span>
+              <span class="progress-data-value">${item.title || 'N/A'}</span>
+            </div>
+            <div class="progress-data-row">
+              <span class="progress-data-label">Status</span>
+              <span class="progress-data-value progress-status-${statusClass}">${statusIcon} ${item.status === true ? 'Success' : item.status === false ? 'Failed' : 'Pending'}</span>
+            </div>
+            ${item.reason ? `
+            <div class="progress-data-row">
+              <span class="progress-data-label">Reason</span>
+              <span class="progress-data-value progress-reason-text">${item.reason}</span>
+            </div>
+            ` : ''}
+          </div>
+        `;
+        
+        progressList.appendChild(div);
+      }
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      setTimeout(() => {
+        errorMessage.style.display = 'none';
+      }, 5000);
+    }
+
+    // Fetch JSON from URL function
+    async function fetchJsonFromUrl(url, targetTextarea, fetchBtn) {
+      if (!url.trim()) {
+        showError('Please enter a URL');
+        return;
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        showError('Please enter a valid URL');
+        return;
+      }
+
+      const originalText = fetchBtn.textContent;
+      fetchBtn.disabled = true;
+      fetchBtn.classList.add('loading');
+      fetchBtn.textContent = 'Fetching...';
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        targetTextarea.value = JSON.stringify(data, null, 2);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showError(`Failed to fetch JSON: ${message}`);
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.classList.remove('loading');
+        fetchBtn.textContent = originalText;
+      }
+    }
+
+    // Fetch button event handlers
+    fetchRegularBtn.addEventListener('click', () => {
+      fetchJsonFromUrl(regularUrlInput.value, jsonInput, fetchRegularBtn);
+    });
+
+    fetchSDBtn.addEventListener('click', () => {
+      fetchJsonFromUrl(sdUrlInput.value, sdCredentialInput, fetchSDBtn);
+    });
+
+    fetchDynamicBtn.addEventListener('click', () => {
+      fetchJsonFromUrl(dynamicUrlInput.value, dynamicCredentialInput, fetchDynamicBtn);
+    });
+
+    // Allow Enter key to trigger fetch
+    regularUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        fetchJsonFromUrl(regularUrlInput.value, jsonInput, fetchRegularBtn);
+      }
+    });
+
+    sdUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        fetchJsonFromUrl(sdUrlInput.value, sdCredentialInput, fetchSDBtn);
+      }
+    });
+
+    dynamicUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        fetchJsonFromUrl(dynamicUrlInput.value, dynamicCredentialInput, fetchDynamicBtn);
+      }
+    });
+
+    function resetUI() {
+      resultsSection.style.display = 'none';
+      progressSection.style.display = 'none';
+      progressItems = {};
+      errorMessage.style.display = 'none';
+    }
+
+    function showResults(result) {
+      // Clear loading animation if running
+      if (window.loadingStepsInterval) {
+        clearInterval(window.loadingStepsInterval);
+        window.loadingStepsInterval = null;
+      }
+      
+      resultsSection.style.display = 'block';
+      
+      if (result.status) {
+        resultCard.className = 'result-card success';
+        resultIcon.textContent = '✓';
+        resultTitle.textContent = 'Verification Successful';
+        resultSubtitle.textContent = 'Your credential has been verified successfully';
+        
+        // Trigger celebration effect on particles
+        triggerCelebrationEffect();
+      } else {
+        resultCard.className = 'result-card error';
+        resultIcon.textContent = '✗';
+        resultTitle.textContent = 'Verification Failed';
+        resultSubtitle.textContent = 'The credential could not be verified';
+        
+        // Trigger error effect on particles
+        triggerErrorEffect();
+      }
+
+      // Build result details
+      let detailsHTML = '';
+      
+      if (result.message) {
+        detailsHTML += `
+          <div class="result-detail">
+            <div class="result-detail-icon">💬</div>
+            <div class="result-detail-content">
+              <div class="result-detail-label">Message</div>
+              <div class="result-detail-value">${result.message}</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      if (result.networkName) {
+        detailsHTML += `
+          <div class="result-detail">
+            <div class="result-detail-icon">🔗</div>
+            <div class="result-detail-content">
+              <div class="result-detail-label">Network</div>
+              <div class="result-detail-value">${result.networkName}</div>
+            </div>
+          </div>
+        `;
+        networkInfo.style.display = 'none';
+      } else {
+        networkInfo.style.display = 'none';
+      }
+      
+      // Add timestamp
+      detailsHTML += `
+        <div class="result-detail">
+          <div class="result-detail-icon">🕐</div>
+          <div class="result-detail-content">
+            <div class="result-detail-label">Verified At</div>
+            <div class="result-detail-value">${new Date().toLocaleString()}</div>
+          </div>
+        </div>
+      `;
+      
+      resultDetails.innerHTML = detailsHTML;
+    }
+    
+    function showLoadingResult() {
+      resultsSection.style.display = 'block';
+      resultCard.className = 'result-card loading';
+      resultIcon.innerHTML = '<div class="loading-spinner"></div>';
+      resultTitle.textContent = 'Verifying Credential...';
+      resultSubtitle.textContent = 'Please wait while we verify your credential';
+      
+      // Show loading content with animated steps
+      resultDetails.innerHTML = `
+        <div class="result-loading-content">
+          <div class="verification-loader">
+            <div class="loader-spinner"></div>
+            <div class="loader-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="loader-steps" id="loaderSteps">
+            <div class="loader-step" id="loaderStep1">
+              <span class="loader-step-icon">1</span>
+              <span class="loader-step-text">Validating credential structure</span>
+              <span class="loader-step-status">Pending</span>
+            </div>
+            <div class="loader-step" id="loaderStep2">
+              <span class="loader-step-icon">2</span>
+              <span class="loader-step-text">Checking issuer profile</span>
+              <span class="loader-step-status">Pending</span>
+            </div>
+            <div class="loader-step" id="loaderStep3">
+              <span class="loader-step-icon">3</span>
+              <span class="loader-step-text">Verifying blockchain proof</span>
+              <span class="loader-step-status">Pending</span>
+            </div>
+            <div class="loader-step" id="loaderStep4">
+              <span class="loader-step-icon">4</span>
+              <span class="loader-step-text">Checking revocation status</span>
+              <span class="loader-step-status">Pending</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      networkInfo.style.display = 'none';
+      
+      // Animate the loading steps
+      animateLoadingSteps();
+    }
+    
+    function animateLoadingSteps() {
+      const steps = ['loaderStep1', 'loaderStep2', 'loaderStep3', 'loaderStep4'];
+      let currentStep = 0;
+      
+      const interval = setInterval(() => {
+        // Complete previous step
+        if (currentStep > 0) {
+          const prevStep = document.getElementById(steps[currentStep - 1]);
+          if (prevStep) {
+            prevStep.classList.remove('active');
+            prevStep.classList.add('completed');
+            prevStep.querySelector('.loader-step-icon').textContent = '✓';
+            prevStep.querySelector('.loader-step-status').textContent = 'Done';
+          }
+        }
+        
+        // Activate current step
+        if (currentStep < steps.length) {
+          const currStep = document.getElementById(steps[currentStep]);
+          if (currStep) {
+            currStep.classList.add('active');
+            currStep.querySelector('.loader-step-status').textContent = 'Processing...';
+          }
+          currentStep++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 800);
+      
+      // Store interval ID to clear it when verification completes
+      window.loadingStepsInterval = interval;
+    }
+    
+    // Celebration effect for successful verification - particles only
+    function triggerCelebrationEffect() {
+      const particlesEl = document.getElementById('particles-js');
+      
+      // Add celebration class for brightness
+      particlesEl.classList.add('celebration');
+      
+      if (window.pJSDom && window.pJSDom[0]) {
+        const pJS = window.pJSDom[0].pJS;
+        
+        // Make particles green/bright smoothly (no refresh)
+        pJS.particles.array.forEach(particle => {
+          particle.color.value = '#10b981';
+          particle.color.rgb = { r: 16, g: 185, b: 129 };
+        });
+        
+        // Change line color to green
+        pJS.particles.line_linked.color = '#10b981';
+        pJS.particles.line_linked.color_rgb_line = { r: 16, g: 185, b: 129 };
+        
+        // Speed up
+        pJS.particles.move.speed = 12;
+      }
+      
+      // Reset after 4 seconds
+      setTimeout(() => {
+        particlesEl.classList.remove('celebration');
+        
+        if (window.pJSDom && window.pJSDom[0]) {
+          const pJS = window.pJSDom[0].pJS;
+          
+          // Restore blue colors smoothly (no refresh)
+          pJS.particles.array.forEach(particle => {
+            particle.color.value = '#4CA3FF';
+            particle.color.rgb = { r: 76, g: 163, b: 255 };
+          });
+          
+          // Restore line color
+          pJS.particles.line_linked.color = '#4CA3FF';
+          pJS.particles.line_linked.color_rgb_line = { r: 76, g: 163, b: 255 };
+          
+          // Restore speed
+          pJS.particles.move.speed = 3;
+        }
+      }, 4000);
+    }
+    
+    // Error effect for failed verification - red particles
+    function triggerErrorEffect() {
+      const particlesEl = document.getElementById('particles-js');
+      
+      // Add error class for brightness
+      particlesEl.classList.add('error-effect');
+      
+      if (window.pJSDom && window.pJSDom[0]) {
+        const pJS = window.pJSDom[0].pJS;
+        
+        // Change existing particles to red smoothly (no refresh)
+        pJS.particles.array.forEach(particle => {
+          particle.color.value = '#ef4444';
+          particle.color.rgb = { r: 239, g: 68, b: 68 };
+        });
+        
+        // Change line color
+        pJS.particles.line_linked.color = '#ef4444';
+        pJS.particles.line_linked.color_rgb_line = { r: 239, g: 68, b: 68 };
+        
+        // Speed up
+        pJS.particles.move.speed = 10;
+        
+        // Reset after 4 seconds
+        setTimeout(() => {
+          particlesEl.classList.remove('error-effect');
+          
+          // Restore blue colors smoothly (no refresh)
+          pJS.particles.array.forEach(particle => {
+            particle.color.value = '#4CA3FF';
+            particle.color.rgb = { r: 76, g: 163, b: 255 };
+          });
+          
+          // Restore line color
+          pJS.particles.line_linked.color = '#4CA3FF';
+          pJS.particles.line_linked.color_rgb_line = { r: 76, g: 163, b: 255 };
+          
+          // Restore speed
+          pJS.particles.move.speed = 3;
+        }, 4000);
+      }
+    }
+
+    function setButtonsEnabled(enabled) {
+      verifyOnChainBtn.disabled = !enabled;
+      verifyOffChainBtn.disabled = !enabled;
+      if (enabled) {
+        verifyOnChainBtn.innerHTML = 'Verify On-Chain';
+        verifyOffChainBtn.innerHTML = 'Verify Off-Chain';
+      } else {
+        verifyOnChainBtn.innerHTML = '<span class="loading"></span> Verifying...';
+        verifyOffChainBtn.innerHTML = '<span class="loading"></span> Verifying...';
+      }
+    }
+
+    async function verifyCredential(offChain = false) {
+      resetUI();
+      
+      const jsonText = jsonInput.value.trim();
+      if (!jsonText) {
+        showError('Please enter a credential JSON');
+        return;
+      }
+
+      let certificate;
+      try {
+        certificate = JSON.parse(jsonText);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showError(`Invalid JSON: ${message}`);
+        return;
+      }
+
+      if (!Ed25519CredentialVerifierClass) {
+        showError('Ed25519CredentialVerifier library not loaded. Please build the library first using: npm run build-dev');
+        return;
+      }
+
+      setButtonsEnabled(false);
+      progressSection.style.display = 'block';
+      showLoadingResult();
+
+      try {
+        const config = getConfig();
+        const verifier = new Ed25519CredentialVerifierClass(progressCallback, config);
+        const result = await verifier.verify(certificate, offChain);
+        showResults(result);
+      } catch (error) {
+        showResults({
+          status: false,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      } finally {
+        setButtonsEnabled(true);
+      }
+    }
+
+    // Toggle between verification modes
+    toggleRegularBtn.addEventListener('click', () => {
+      toggleRegularBtn.classList.add('active');
+      toggleSDBtn.classList.remove('active');
+      toggleDynamicBtn.classList.remove('active');
+      regularVerification.classList.add('active');
+      sdVerification.classList.remove('active');
+      dynamicVerification.classList.remove('active');
+      resetUI();
+    });
+
+    toggleSDBtn.addEventListener('click', () => {
+      toggleSDBtn.classList.add('active');
+      toggleRegularBtn.classList.remove('active');
+      toggleDynamicBtn.classList.remove('active');
+      sdVerification.classList.add('active');
+      regularVerification.classList.remove('active');
+      dynamicVerification.classList.remove('active');
+      resetUI();
+    });
+
+    toggleDynamicBtn.addEventListener('click', () => {
+      toggleDynamicBtn.classList.add('active');
+      toggleRegularBtn.classList.remove('active');
+      toggleSDBtn.classList.remove('active');
+      dynamicVerification.classList.add('active');
+      regularVerification.classList.remove('active');
+      sdVerification.classList.remove('active');
+      resetUI();
+    });
+
+    // Regular verification handlers
+    verifyOnChainBtn.addEventListener('click', () => verifyCredential(false));
+    verifyOffChainBtn.addEventListener('click', () => verifyCredential(true));
+    
+    clearBtn.addEventListener('click', () => {
+      jsonInput.value = '';
+      regularUrlInput.value = '';
+      resetUI();
+    });
+
+    // Dynamic verification handlers
+    verifyDynamicBtn.addEventListener('click', () => verifyDynamicCredential());
+    
+    clearDynamicBtn.addEventListener('click', () => {
+      dynamicCredentialInput.value = '';
+      dynamicUrlInput.value = '';
+      resetUI();
+    });
+
+    // SD verification handlers
+    verifySDBtn.addEventListener('click', () => verifySDCredential());
+    
+    clearSDBtn.addEventListener('click', () => {
+      sdCredentialInput.value = '';
+      sdUrlInput.value = '';
+      resetUI();
+    });
+
+    // Verify SD Credential function
+    async function verifySDCredential() {
+      resetUI();
+      
+      const jsonText = sdCredentialInput.value.trim();
+      if (!jsonText) {
+        showError('Please enter a SD credential JSON');
+        return;
+      }
+
+      let sdCredential;
+      try {
+        sdCredential = JSON.parse(jsonText);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showError(`Invalid JSON: ${message}`);
+        return;
+      }
+
+      if (!JsonWebSignatureVerifierClass) {
+        showError('JsonWebSignatureVerifier library not loaded. Please build the library first using: npm run build-dev');
+        return;
+      }
+
+      verifySDBtn.disabled = true;
+      verifySDBtn.innerHTML = '<span class="loading"></span> Verifying...';
+      progressSection.style.display = 'block';
+      showLoadingResult();
+
+      try {
+        const config = getConfig();
+        const sdVerifier = new JsonWebSignatureVerifierClass(progressCallback, config);
+        // The verify method is async and returns { message, status, networkName }
+        const result = await sdVerifier.verify(sdCredential);
+        
+        // Check the actual status from the verification result
+        if (result.status) {
+          // Verification successful
+        resultsSection.style.display = 'block';
+        resultCard.className = 'result-card success';
+          resultIcon.textContent = '✓';
+          resultTitle.textContent = 'SD Credential Verified';
+          resultSubtitle.textContent = 'Selective Disclosure JWT has been successfully verified';
+        
+          // Display success details
+          resultDetails.innerHTML = `
+            <div class="result-detail">
+              <div class="result-detail-icon">💬</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Message</div>
+                <div class="result-detail-value">${result.message || 'Verification Successful'}</div>
+          </div>
+          </div>
+            ${result.networkName ? `
+            <div class="result-detail">
+              <div class="result-detail-icon">🔗</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Network</div>
+                <div class="result-detail-value">${result.networkName}</div>
+          </div>
+          </div>
+            ` : ''}
+            <div class="result-detail">
+              <div class="result-detail-icon">📄</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Format</div>
+                <div class="result-detail-value">${sdCredential.format || 'N/A'}</div>
+          </div>
+          </div>
+            <div class="result-detail">
+              <div class="result-detail-icon">🏢</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Issuer</div>
+                <div class="result-detail-value" style="word-break: break-all;">${sdCredential.issuer || 'N/A'}</div>
+          </div>
+          </div>
+            <div class="result-detail">
+              <div class="result-detail-icon">📅</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Issued At</div>
+                <div class="result-detail-value">${sdCredential.issued_at || 'N/A'}</div>
+              </div>
+            </div>
+            <div class="result-detail">
+              <div class="result-detail-icon">🔐</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Disclosures (${(sdCredential.disclosures || []).length} items)</div>
+                <div class="result-detail-value" style="font-size: 0.85em; max-height: 150px; overflow-y: auto;">${JSON.stringify(sdCredential.disclosures || [], null, 2)}</div>
+              </div>
+            </div>
+            <div class="result-detail">
+              <div class="result-detail-icon">🕐</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Verified At</div>
+                <div class="result-detail-value">${new Date().toLocaleString()}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          // Verification failed
+          resultsSection.style.display = 'block';
+          resultCard.className = 'result-card error';
+          resultIcon.textContent = '✗';
+          resultTitle.textContent = 'SD Credential Verification Failed';
+          resultSubtitle.textContent = 'The credential could not be verified';
+          
+          // Display failure details
+          resultDetails.innerHTML = `
+            <div class="result-detail">
+              <div class="result-detail-icon">⚠️</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Error Message</div>
+                <div class="result-detail-value" style="color: #ef4444;">${result.message || 'Verification Failed'}</div>
+              </div>
+            </div>
+            ${result.networkName ? `
+            <div class="result-detail">
+              <div class="result-detail-icon">🔗</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Network</div>
+                <div class="result-detail-value">${result.networkName}</div>
+              </div>
+            </div>
+            ` : ''}
+            <div class="result-detail">
+              <div class="result-detail-icon">🕐</div>
+              <div class="result-detail-content">
+                <div class="result-detail-label">Attempted At</div>
+                <div class="result-detail-value">${new Date().toLocaleString()}</div>
+              </div>
+          </div>
+        `;
+        }
+        
+        networkInfo.style.display = 'none';
+      } catch (error) {
+        showResults({
+          status: false,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      } finally {
+        verifySDBtn.disabled = false;
+        verifySDBtn.innerHTML = 'Verify SD Credential';
+      }
+    }
+
+    // Format JSON on paste (optional enhancement)
+    jsonInput.addEventListener('paste', function() {
+      setTimeout(() => {
+        try {
+          const text = this.value;
+          const parsed = JSON.parse(text);
+          this.value = JSON.stringify(parsed, null, 2);
+        } catch {
+          // Not valid JSON, keep as is
+        }
+      }, 10);
+    });
+
+    sdCredentialInput.addEventListener('paste', function() {
+      setTimeout(() => {
+        try {
+          const text = this.value;
+          const parsed = JSON.parse(text);
+          this.value = JSON.stringify(parsed, null, 2);
+        } catch {
+          // Not valid JSON, keep as is
+        }
+      }, 10);
+    });
+
+    dynamicCredentialInput.addEventListener('paste', function() {
+      setTimeout(() => {
+        try {
+          const text = this.value;
+          const parsed = JSON.parse(text);
+          this.value = JSON.stringify(parsed, null, 2);
+        } catch {
+          // Not valid JSON, keep as is
+        }
+      }, 10);
+    });
+
+    // Verify Dynamic Credential function
+    async function verifyDynamicCredential() {
+      resetUI();
+      
+      const jsonText = dynamicCredentialInput.value.trim();
+      if (!jsonText) {
+        showError('Please enter a credential JSON');
+        return;
+      }
+
+      let credential;
+      try {
+        credential = JSON.parse(jsonText);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showError(`Invalid JSON: ${message}`);
+        return;
+      }
+
+      if (!EveryCredVerifierClass) {
+        showError('EveryCredVerifier library not loaded. Please build the library first using: npm run build-dev');
+        return;
+      }
+
+      verifyDynamicBtn.disabled = true;
+      verifyDynamicBtn.innerHTML = '<span class="loading"></span> Verifying...';
+      progressSection.style.display = 'block';
+      showLoadingResult();
+
+      try {
+        const config = getConfig();
+        const dynamicVerifier = new EveryCredVerifierClass(progressCallback, config);
+        const result = await dynamicVerifier.verify(credential);
+        
+        showResults({
+          status: result.status,
+          message: result.message || 'Verification completed',
+          networkName: result.networkName
+        });
+      } catch (error) {
+        showResults({
+          status: false,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      } finally {
+        verifyDynamicBtn.disabled = false;
+        verifyDynamicBtn.innerHTML = 'Verify Credential (Dynamic)';
+      }
+    }
+  </script>
+</body>
 </html>
