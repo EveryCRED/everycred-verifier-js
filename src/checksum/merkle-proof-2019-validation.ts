@@ -24,6 +24,7 @@ import {
   isKeyPresent,
   isObjectEmpty
 } from '../utils/credential-util';
+import { ed25519PublicKeyFromJwk, isDidDocumentProfile, resolveVerificationMethod } from '../utils/did-key-resolver';
 import { logger } from '../utils/logger';
 
 export class MerkleProofValidator2019 {
@@ -36,7 +37,8 @@ export class MerkleProofValidator2019 {
 
   constructor(
     private progressCallback: (step: string, title: string, status: boolean, reason: string) => void,
-    private readonly config: VerificationConfig = {}
+    private readonly config: VerificationConfig = {},
+    private readonly issuerProfileData: any = null
   ) { }
 
   /**
@@ -130,11 +132,16 @@ export class MerkleProofValidator2019 {
       const dataString = JSON.stringify(dataToVerify);
       const messageUint8 = naclUtil.decodeUTF8(dataString);
       const signature = naclUtil.decodeBase64(this.credential?.proof?.proofValue);
-      const publicKey = getDataFromKey(
+
+      const verificationMethodRef = getDataFromKey(
         this.credential?.proof,
         CHECKSUM_MERKLEPROOF_CHECK_KEYS.verificationMethod
-      )?.split('#')[1];
-      const pubKey = naclUtil.decodeBase64(publicKey);
+      );
+      const pubKey = this.resolveEd25519PublicKey(verificationMethodRef);
+      if (!pubKey) {
+        this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.VERIFICATION_METHOD_NOT_FOUND);
+        return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
+      }
 
       // Verify the signature
       const isValid = nacl.sign.detached.verify(messageUint8, signature, pubKey);
@@ -150,6 +157,32 @@ export class MerkleProofValidator2019 {
       this.progressCallback(Stages.verifyTargetHash, Messages.SIGNATURE_VERIFICATION, false, Messages.SIGNATURE_VERIFICATION_FAILED);
       return { message: Messages.SIGNATURE_VERIFICATION, status: false, networkName: this.networkName };
     }
+  }
+
+  /**
+   * Resolves the Ed25519 public key used to verify the credential signature.
+   * Prefers a DID-document issuer profile: the credential's
+   * `proof.verificationMethod` references a `verificationMethod` entry whose
+   * `publicKeyJwk` carries the key. Falls back to the legacy behaviour where the
+   * key is embedded after '#' in `proof.verificationMethod`.
+   * @param verificationMethodRef - The credential proof's verificationMethod reference.
+   * @returns The 32-byte public key, or null when it cannot be resolved.
+   */
+  private resolveEd25519PublicKey(verificationMethodRef: string): Uint8Array | null {
+    if (isDidDocumentProfile(this.issuerProfileData)) {
+      logger('[EveryCred:key-resolution] Ed25519 path: resolving key from DID-document issuer profile', 'log');
+      const vm = resolveVerificationMethod(this.issuerProfileData, verificationMethodRef);
+      if (vm?.publicKeyJwk) {
+        return ed25519PublicKeyFromJwk(vm.publicKeyJwk);
+      }
+      // DID-document profile present but no matching verificationMethod/publicKeyJwk.
+      return null;
+    }
+
+    // Legacy: the base64 key is embedded after '#' in proof.verificationMethod.
+    logger('[EveryCred:key-resolution] Ed25519 path: using legacy in-proof embedded key (no DID-document profile)', 'log');
+    const legacyKey = verificationMethodRef?.split('#')[1];
+    return legacyKey ? naclUtil.decodeBase64(legacyKey) : null;
   }
 
   /**

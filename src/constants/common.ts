@@ -61,6 +61,8 @@ export enum CREDENTIALS_ISSUER_VALIDATORS_KEYS {
   revocationList = 'revocationList',
   publicKey = 'publicKey',
   profile = 'profile',
+  verificationMethod = 'verificationMethod',
+  publicKeyJwk = 'publicKeyJwk',
 }
 
 /* Defining an enum called `STATUS_REVOCATION_CHECK` which contains keys used for checking the status

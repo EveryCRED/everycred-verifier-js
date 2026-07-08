@@ -74,9 +74,18 @@ export enum Messages {
   PUBLIC_KEY_ISSUER_PROFILE_KEY_SUCCESS = "publicKey key is present in the issuer profile information with valid data.",
   PUBLIC_KEY_ISSUER_PROFILE_KEY_ERROR = "publicKey key is not present or having invalid data in the issuer profile information.",
 
+  VERIFICATION_METHOD_VALIDATE = "Validate issuer profile verification method.",
+  VERIFICATION_METHOD_SUCCESS = "Issuer profile verificationMethod is present with a valid publicKeyJwk.",
+  VERIFICATION_METHOD_ERROR = "Issuer profile verificationMethod is missing or has no valid publicKeyJwk.",
+  VERIFICATION_METHOD_NOT_FOUND = "No matching verificationMethod found in the issuer profile for the credential key reference.",
+  UNSUPPORTED_JWK_ALGORITHM = "Unsupported public key algorithm in the issuer profile verificationMethod.",
+  KEY_ISSUER_BINDING_ERROR = "The credential key reference (kid) or verificationMethod controller does not belong to the issuer DID.",
+  ALG_KEY_MISMATCH = "The JWT 'alg' header does not match the type of the issuer public key resolved for verification.",
+
   FETCHING_REVOCATION_LIST_ISSUER_PROFILE = "Fetching revocation list started",
   FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS = "Fetching revocation list details successfully.",
   FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR = "Error while fetching revocation list",
+  REVOCATION_LIST_FETCH_ERROR = "The issuer profile declares a revocation list but it could not be fetched from the declared URL.",
 
   REVOCATION_STATUS_VALIDATION = 'Revocation status validation',
 

@@ -1,31 +1,172 @@
 import { Messages } from "../constants/messages";
 import { Stages } from "../constants/stages";
+import { DidDocumentProfile } from "../models/common.model";
+import {
+    ed25519PublicKeyFromJwk,
+    importRsaCryptoKeyFromJwk,
+    isDidDocumentProfile,
+    isVerificationMethodBoundToIssuer,
+    pemEmbeddedInJwkModulus,
+    resolveVerificationMethod,
+    verifyEddsaJwt,
+} from "../utils/did-key-resolver";
 import { base64UrlDecode, base64UrlToArrayBuffer, extractAndNormalizeJwt } from "../utils/jwt-utils";
+import { logger } from "../utils/logger";
+
+/** Prefix for issuer-key-resolution diagnostic logs (filter in the console). */
+const LOG_PREFIX = '[EveryCred:key-resolution]';
 
 
 export class SignatureValidator {
 
     constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
 
-    async validate(jwtToken: string, header: Record<string, unknown>): Promise<{ status: boolean, message: string }> {
+    /**
+     * Verifies the JWT signature.
+     * When the issuer profile is a DID document, the key is resolved from its
+     * verificationMethod[].publicKeyJwk (EdDSA via tweetnacl, RS256 via Web Crypto).
+     * Otherwise the legacy path is used: a PEM key embedded in the JWT header `kid` (RS256).
+     * @param jwtToken - The raw/normalizable JWT token.
+     * @param header - The parsed JWT header (provides `kid`).
+     * @param issuerProfile - Optional issuer profile; enables DID-document key resolution.
+     */
+    async validate(jwtToken: string, header: Record<string, unknown>, issuerProfile?: any): Promise<{ status: boolean, message: string }> {
         const normalizedJwt = extractAndNormalizeJwt(jwtToken);
         if (!normalizedJwt) {
             this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, 'Invalid JWT token');
             return { status: false, message: 'Invalid JWT token' };
         }
-        const publicKeyPem = this.getPublicKeyFromJwtHeader(header);
-        if (!publicKeyPem) {
-            this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, 'Missing public key in JWT header');
-            return { status: false, message: 'Missing public key in JWT header' };
-        }
 
-        const verifyWithWebCryptoResult = await this.verifyWithWebCrypto(normalizedJwt, publicKeyPem);
-        if (!verifyWithWebCryptoResult.status) {
-            this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, verifyWithWebCryptoResult.message);
-            return { status: false, message: verifyWithWebCryptoResult.message };
+        const result = isDidDocumentProfile(issuerProfile)
+            ? await this.verifyFromIssuerProfile(normalizedJwt, header, issuerProfile)
+            : await this.verifyFromHeaderPem(normalizedJwt, header);
+
+        if (!result.status) {
+            this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, result.message);
+            return result;
         }
         this.progressCallback(Stages.verification, Messages.VERIFICATION_SUCCESS, true, Messages.VERIFICATION_SUCCESS);
         return { status: true, message: Messages.VERIFICATION_SUCCESS };
+    }
+
+    /**
+     * Legacy verification: extract a PEM public key embedded in the JWT header
+     * `kid` and verify with RS256 via the Web Crypto API.
+     */
+    private async verifyFromHeaderPem(normalizedJwt: string, header: Record<string, unknown>): Promise<{ status: boolean, message: string }> {
+        let publicKeyPem: string;
+        try {
+            publicKeyPem = this.getPublicKeyFromJwtHeader(header);
+        } catch (error: any) {
+            return { status: false, message: error?.message || 'Missing public key in JWT header' };
+        }
+        if (!publicKeyPem) {
+            return { status: false, message: 'Missing public key in JWT header' };
+        }
+        return await this.verifyWithWebCrypto(normalizedJwt, publicKeyPem);
+    }
+
+    /**
+     * DID-document verification: resolve the verificationMethod referenced by the
+     * JWT header `kid`, then verify with its publicKeyJwk (EdDSA or RS256).
+     */
+    private async verifyFromIssuerProfile(normalizedJwt: string, header: Record<string, unknown>, issuerProfile: DidDocumentProfile): Promise<{ status: boolean, message: string }> {
+        const kid = typeof header?.['kid'] === 'string' ? (header['kid'] as string) : '';
+        const alg = typeof header?.['alg'] === 'string' ? (header['alg'] as string) : '';
+        logger(`${LOG_PREFIX} SD-JWT path: resolving key from DID-document issuer profile (header kid="${kid}", alg="${alg}")`);
+        const vm = resolveVerificationMethod(issuerProfile, kid);
+        if (!vm?.publicKeyJwk) {
+            return { status: false, message: Messages.VERIFICATION_METHOD_NOT_FOUND };
+        }
+
+        // The resolved key's declared owner (controller / id DID) must match the DID
+        // named in the kid; otherwise a credential could reference a foreign key.
+        // The profile's own `id` is not compared — it may be a DID or a profile URL.
+        if (!isVerificationMethodBoundToIssuer(vm, kid)) {
+            return { status: false, message: Messages.KEY_ISSUER_BINDING_ERROR };
+        }
+
+        const parts = normalizedJwt.split('.');
+        if (parts.length !== 3) {
+            return { status: false, message: 'Invalid token format for signature verification' };
+        }
+        const [headerB64, payloadB64, signatureB64] = parts;
+        const jwk = vm.publicKeyJwk;
+        logger(`${LOG_PREFIX} SD-JWT path: using publicKeyJwk (kty="${jwk.kty}", crv="${jwk.crv ?? ''}", alg="${jwk.alg ?? ''}")`);
+
+        // The verification procedure is chosen from the RESOLVED KEY's type, and the
+        // token's `alg` header must be consistent with it — never the other way
+        // around, to rule out algorithm-confusion attacks.
+
+        // EdDSA / Ed25519
+        if (jwk.kty === 'OKP' && jwk.crv === 'Ed25519') {
+            if (alg !== 'EdDSA') {
+                logger(`${LOG_PREFIX} alg mismatch: header alg="${alg}" but resolved key is OKP/Ed25519 (expected "EdDSA")`, 'warn');
+                return { status: false, message: Messages.ALG_KEY_MISMATCH };
+            }
+            try {
+                const pubKey = ed25519PublicKeyFromJwk(jwk);
+                const isValid = verifyEddsaJwt(headerB64 ?? '', payloadB64 ?? '', signatureB64 ?? '', pubKey);
+                return {
+                    status: isValid,
+                    message: isValid ? Messages.VERIFICATION_SUCCESS : 'Signature verification failed - invalid signature',
+                };
+            } catch (error: any) {
+                return { status: false, message: `Error verifying EdDSA signature: ${error?.message}` };
+            }
+        }
+
+        // RSA / RS256
+        if (jwk.kty === 'RSA') {
+            if (alg !== 'RS256') {
+                logger(`${LOG_PREFIX} alg mismatch: header alg="${alg}" but resolved key is RSA (expected "RS256")`, 'warn');
+                return { status: false, message: Messages.ALG_KEY_MISMATCH };
+            }
+            try {
+                // Non-standard EveryCred profiles embed a full PEM in `n` instead of the
+                // base64url modulus; import those as SPKI/PEM, standard JWKs directly.
+                const embeddedPem = pemEmbeddedInJwkModulus(jwk);
+                const cryptoKey = embeddedPem
+                    ? await this.importPublicKey(embeddedPem)
+                    : await importRsaCryptoKeyFromJwk(jwk);
+                if (!cryptoKey) {
+                    return { status: false, message: 'Failed to import RSA public key from issuer profile' };
+                }
+                return await this.verifyRs256WithCryptoKey(normalizedJwt, cryptoKey);
+            } catch (error: any) {
+                return { status: false, message: `Error importing RSA public key: ${error?.message}` };
+            }
+        }
+
+        return { status: false, message: Messages.UNSUPPORTED_JWK_ALGORITHM };
+    }
+
+    /**
+     * Verify an RS256 JWT against an already-imported CryptoKey (used for the
+     * JWK-resolved RSA path). The PEM path keeps using verifyWithWebCrypto.
+     */
+    private async verifyRs256WithCryptoKey(token: string, cryptoKey: CryptoKey): Promise<{ status: boolean, message: string }> {
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            return { status: false, message: 'Invalid token format for Web Crypto verification' };
+        }
+        const [headerB64, payloadB64, signatureB64] = parts;
+        const signedDataBuffer = new TextEncoder().encode(`${headerB64}.${payloadB64}`);
+        const signatureArrayBuffer = base64UrlToArrayBuffer(signatureB64 ?? '');
+        try {
+            const isValid = await crypto.subtle.verify(
+                { name: 'RSASSA-PKCS1-v1_5', hash: { name: 'SHA-256' } },
+                cryptoKey,
+                signatureArrayBuffer,
+                signedDataBuffer
+            );
+            return {
+                status: isValid,
+                message: isValid ? Messages.VERIFICATION_SUCCESS : 'Signature verification failed - invalid signature',
+            };
+        } catch (error: any) {
+            return { status: false, message: `Web Crypto API verification error: ${error?.message}` };
+        }
     }
 
     /**

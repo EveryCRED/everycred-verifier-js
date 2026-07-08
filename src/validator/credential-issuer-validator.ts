@@ -12,6 +12,7 @@ import {
   isKeyPresent,
   isValidURL,
 } from "../utils/credential-util";
+import { isDidDocumentProfile } from "../utils/did-key-resolver";
 
 export class CredentialIssuerValidator {
   private credential: any;
@@ -75,6 +76,13 @@ export class CredentialIssuerValidator {
         return { status: false, message: Messages.FETCHING_ISSUER_PROFILE_ERROR };
       }
 
+      // DID-document issuer profiles (verificationMethod + publicKeyJwk) use a relaxed
+      // validation chain: they legitimately omit type/@context/publicKey[] and an
+      // id-equals-profile-URL relationship, so those checks do not apply.
+      if (isDidDocumentProfile(this.issuerProfileData)) {
+        return await this.validateDidDocumentIssuerProfile();
+      }
+
       if (
         (await this.validateIssuerProfileContext()).status &&
         this.validateIssuerCredentialType().status &&
@@ -94,6 +102,51 @@ export class CredentialIssuerValidator {
 
     this.progressCallback(Stages.validateCredentialIssuer, Messages.ISSUER_VALIDATION, false, Messages.ISSUER_KEY_ERROR);
     return { status: false, message: Messages.ISSUER_KEY_ERROR };
+  }
+
+  /**
+   * Relaxed validation chain for DID-document issuer profiles. Validates the
+   * verificationMethod/publicKeyJwk plus name/email, and treats a missing
+   * revocationList as "nothing to revoke against". Skips the legacy
+   * context/type/id-URL/publicKey[] checks that do not apply to DID documents.
+   * @returns ResponseMessage with the overall validation status.
+   */
+  private async validateDidDocumentIssuerProfile(): Promise<ResponseMessage> {
+    if (
+      this.validateIssuerProfileVerificationMethod().status &&
+      this.validateIssuerProfileName().status &&
+      this.validateIssuerProfileEmail().status &&
+      (await this.validateRevocationListFromIssuerProfile()).status
+    ) {
+      this.progressCallback(Stages.validateCredentialIssuer, Messages.ISSUER_VALIDATION, true, Messages.ISSUER_KEY_SUCCESS);
+      return { status: true, message: Messages.ISSUER_KEY_SUCCESS };
+    }
+
+    this.progressCallback(Stages.validateCredentialIssuer, Messages.ISSUER_VALIDATION, false, Messages.ISSUER_KEY_ERROR);
+    return { status: false, message: Messages.ISSUER_KEY_ERROR };
+  }
+
+  /**
+   * Validates that the DID-document issuer profile has at least one
+   * verificationMethod entry carrying a usable publicKeyJwk (with id and type).
+   * @returns ProcessStepStatus for the verificationMethod validation step.
+   */
+  private validateIssuerProfileVerificationMethod(): ProcessStepStatus {
+    const methods = getDataFromKey(
+      this.issuerProfileData,
+      CREDENTIALS_ISSUER_VALIDATORS_KEYS.verificationMethod
+    );
+
+    if (
+      Array.isArray(methods) &&
+      methods.some((vm: any) => vm?.id && vm?.type && vm?.publicKeyJwk?.kty)
+    ) {
+      this.progressCallback(Stages.validateIssuerProfilePublicKey, Messages.VERIFICATION_METHOD_VALIDATE, true, Messages.VERIFICATION_METHOD_SUCCESS);
+      return { step: Stages.validateIssuerProfilePublicKey, title: Messages.VERIFICATION_METHOD_VALIDATE, status: true, reason: Messages.VERIFICATION_METHOD_SUCCESS };
+    }
+
+    this.progressCallback(Stages.validateIssuerProfilePublicKey, Messages.VERIFICATION_METHOD_VALIDATE, false, Messages.VERIFICATION_METHOD_ERROR);
+    return { step: Stages.validateIssuerProfilePublicKey, title: Messages.VERIFICATION_METHOD_VALIDATE, status: false, reason: Messages.VERIFICATION_METHOD_ERROR };
   }
 
   /**
@@ -298,18 +351,34 @@ export class CredentialIssuerValidator {
    */
   private async validateRevocationListFromIssuerProfile(): Promise<ProcessStepStatus> {
     if (this.issuerProfileData) {
-      const revocationList = getDataFromKey(
+      const revocationListUrl = getDataFromKey(
         this.issuerProfileData,
         CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList
-      ) + `?v=${new Date().getTime()}`;
-
-      this.revocationListData = await getDataFromAPI(
-        revocationList
       );
-      if (this.revocationListData) {
+
+      // The revocation list is created together with the issuer profile, so a
+      // missing or invalid URL means the profile is incomplete → invalid.
+      if (!revocationListUrl || !isValidURL(revocationListUrl)) {
+        this.progressCallback(Stages.validateRevocationListFromIssuerProfile, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, false, Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_ERROR);
+        return { step: Stages.validateRevocationListFromIssuerProfile, title: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, status: false, reason: Messages.REVOCATION_LIST_ISSUER_PROFILE_KEY_ERROR };
+      }
+
+      const revocationList = revocationListUrl + `?v=${new Date().getTime()}`;
+
+      try {
+        this.revocationListData = await getDataFromAPI(revocationList);
+      } catch (error) {
+        this.revocationListData = null;
+      }
+
+      if (this.revocationListData && Object.keys(this.revocationListData).length) {
         this.progressCallback(Stages.validateRevocationListFromIssuerProfile, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, true, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS);
         return { step: Stages.validateRevocationListFromIssuerProfile, title: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, status: true, reason: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_SUCCESS };
       }
+
+      // URL was declared but the list could not be fetched → invalid.
+      this.progressCallback(Stages.validateRevocationListFromIssuerProfile, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, false, Messages.REVOCATION_LIST_FETCH_ERROR);
+      return { step: Stages.validateRevocationListFromIssuerProfile, title: Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, status: false, reason: Messages.REVOCATION_LIST_FETCH_ERROR };
     }
 
     this.progressCallback(Stages.validateRevocationListFromIssuerProfile, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE, false, Messages.FETCHING_REVOCATION_LIST_ISSUER_PROFILE_ERROR);

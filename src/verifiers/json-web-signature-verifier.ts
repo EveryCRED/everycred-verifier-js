@@ -265,17 +265,36 @@ export class JsonWebSignatureVerifier {
    * @returns A promise that resolves when data fetching is complete.
    */
   private async fetchIssuerAndRevocationData(): Promise<void> {
-    if (isKeyPresent(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.issuer)) {
-      const issuerDataUrl = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.issuer).profile;
-      if (issuerDataUrl) {
-        this.issuerProfileData = await getDataFromAPI(issuerDataUrl);
-        if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList)) {
-          const revocationListUrl = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList);
-          if (revocationListUrl) {
-            this.revocationListData = await getDataFromAPI(revocationListUrl);
-          }
-        }
+    await this.ensureIssuerProfileData();
+    if (isKeyPresent(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList)) {
+      const revocationListUrl = getDataFromKey(this.issuerProfileData, CREDENTIALS_ISSUER_VALIDATORS_KEYS.revocationList);
+      if (revocationListUrl) {
+        this.revocationListData = await getDataFromAPI(revocationListUrl);
       }
+    }
+  }
+
+  /**
+   * Fetches the issuer profile (from credential.issuer.profile) once and caches it.
+   * Used by both signature verification (DID-document key resolution) and the
+   * revocation step. Failures are swallowed so signature verification can fall
+   * back to the legacy header-embedded key path.
+   */
+  private async ensureIssuerProfileData(): Promise<void> {
+    if (this.issuerProfileData && Object.keys(this.issuerProfileData).length) {
+      return;
+    }
+    if (!isKeyPresent(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.issuer)) {
+      return;
+    }
+    const issuerProfileUrl = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.issuer)?.profile;
+    if (!issuerProfileUrl) {
+      return;
+    }
+    try {
+      this.issuerProfileData = await getDataFromAPI(issuerProfileUrl);
+    } catch (error) {
+      // Leave issuerProfileData unset; signature verification falls back to the legacy header path.
     }
   }
 
@@ -298,8 +317,9 @@ export class JsonWebSignatureVerifier {
    * @returns A promise resolving to true if signature is valid, false otherwise.
    */
   private async verifySignature(): Promise<boolean> {
+    await this.ensureIssuerProfileData();
     const signatureValidator = new SignatureValidator(this.progressCallback);
-    const signatureValidationResult = await signatureValidator.validate(this.jwtToken, this.header);
+    const signatureValidationResult = await signatureValidator.validate(this.jwtToken, this.header, this.issuerProfileData);
     const status = signatureValidationResult?.status;
     if (!status) {
       this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, 'Signature verification failed');

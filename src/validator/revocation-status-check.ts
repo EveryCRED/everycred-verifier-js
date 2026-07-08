@@ -74,6 +74,15 @@ export class RevocationStatusCheck {
       return await this.checkValidityDates();
     }
 
+    // Every issuer profile is created together with its revocation list, so a
+    // missing/empty list here means it could not be fetched → the credential is
+    // NOT verifiable. (An empty `revokedAssertions` array is still a valid,
+    // non-empty document and passes through the full checks below.)
+    if (!this.revocationListData || !Object.keys(this.revocationListData).length) {
+      this.progressCallback(Stages.revocationStatusCheck, Messages.REVOCATION_LIST_FETCH_ERROR, false, Messages.REVOCATION_LIST_FETCH_ERROR);
+      return false;
+    }
+
     return (await this.completeRevocationChecks()) &&
       (await this.checkValidityDates());
   }

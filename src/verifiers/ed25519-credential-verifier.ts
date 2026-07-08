@@ -134,7 +134,7 @@ export class Ed25519CredentialVerifier {
    * @returns a Promise<boolean>.
    */
   private async validateChecksum(): Promise<boolean> {
-    const validate = await new MerkleProofValidator2019(this.progressCallback, this.config).validate(this.certificate, this.offChainVerification);
+    const validate = await new MerkleProofValidator2019(this.progressCallback, this.config, this.issuerProfileData).validate(this.certificate, this.offChainVerification);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
 
