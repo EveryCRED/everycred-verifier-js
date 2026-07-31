@@ -3,7 +3,7 @@
 # EveryCRED Verifier JS
 
 [![Made by EveryCRED](https://img.shields.io/badge/Made%20by-EveryCRED-blue)](https://everycred.com)
-![Version](https://img.shields.io/badge/Version-3.0.0--beta.0-blue)
+![Version](https://img.shields.io/badge/Version-3.0.0--beta.1-blue)
 
 [EveryCRED Verifier JS](https://www.npmjs.com/package/@viitorcloudtechnologies/everycred-verifier-js) is a custom verifier designed to verify EveryCRED credentials according to the W3C credentials standard.
 
@@ -265,6 +265,6 @@ verification (see [Off-Chain Verification](#off-chain-verification) above).
 
 ## Package Notes
 
-Version 3.0.0-beta.0 of the EveryCRED Verifier JS verifies EveryCRED credentials according to the W3C credentials standard. The package supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. Blockchain explorer API keys are supplied by the consumer at runtime via `blockchainApiKeys` and are never bundled with the package. Issuer signing keys are resolved from the issuer's published profile (DID document `verificationMethod`, with legacy formats supported as a fallback), and issuer profiles are now required to publish a revocation list for verification to succeed.
+Version 3.0.0-beta.1 of the EveryCRED Verifier JS verifies EveryCRED credentials according to the W3C credentials standard. The package supports both SD JWT format and traditional Ed25519 format credentials, with automatic format detection and routing. Blockchain explorer API keys are supplied by the consumer at runtime via `blockchainApiKeys` and are never bundled with the package. Issuer signing keys are resolved from the issuer's published profile (DID document `verificationMethod`, with legacy formats supported as a fallback), and issuer profiles are now required to publish a revocation list for verification to succeed.
 
-> **Pre-release notice:** `3.0.0-beta.0` is the first pre-release of the 3.0.0 line, published to the npm `beta` dist-tag. It has not been merged into `main` and is not the `latest` stable release. See [RELEASE_NOTES_v3.0.0-beta.0.md](./RELEASE_NOTES_v3.0.0-beta.0.md) for full details.
+> **Pre-release notice:** `3.0.0-beta.1` is a pre-release of the 3.0.0 line, published to the npm `beta` dist-tag. It has not been merged into `main` and is not the `latest` stable release. See the [GitHub Releases page](https://github.com/EveryCRED/everycred-verifier-js/releases) for full details on each pre-release.

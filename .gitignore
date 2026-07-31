@@ -50,6 +50,9 @@ Thumbs.db
 # Ignore the dist folder
 /dist
 
+# npm pack output
+*.tgz
+
 # Ignore .d.ts files
 *.d.ts
 
