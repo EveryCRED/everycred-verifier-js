@@ -1,11 +1,14 @@
 import { Messages } from "../constants/messages";
 import { Stages } from "../constants/stages";
-import { DidDocumentProfile } from "../models/common.model";
+import { DidDocumentProfile, VerificationConfig } from "../models/common.model";
 import {
+    decodeBase64OrBase64Url,
     ed25519PublicKeyFromJwk,
     importRsaCryptoKeyFromJwk,
     isDidDocumentProfile,
+    isPemPublicKey,
     isVerificationMethodBoundToIssuer,
+    matchOfflineVerificationKey,
     pemEmbeddedInJwkModulus,
     resolveVerificationMethod,
     verifyEddsaJwt,
@@ -19,13 +22,19 @@ const LOG_PREFIX = '[EveryCred:key-resolution]';
 
 export class SignatureValidator {
 
-    constructor(private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void) { }
+    constructor(
+        private readonly progressCallback: (step: string, title: string, status: boolean, reason: string) => void,
+        private readonly config: VerificationConfig = {}
+    ) { }
 
     /**
      * Verifies the JWT signature.
-     * When the issuer profile is a DID document, the key is resolved from its
-     * verificationMethod[].publicKeyJwk (EdDSA via tweetnacl, RS256 via Web Crypto).
-     * Otherwise the legacy path is used: a PEM key embedded in the JWT header `kid` (RS256).
+     * Key resolution order:
+     *   1. A caller-pinned key from `config.offlinePublicKey` (needs no network) —
+     *      Ed25519 jwk.x for EdDSA, or RSA PEM for RS256.
+     *   2. The issuer profile's verificationMethod[].publicKeyJwk when it is a DID
+     *      document (EdDSA via tweetnacl, RS256 via Web Crypto).
+     *   3. Legacy: a PEM key embedded in the JWT header `kid` (RS256).
      * @param jwtToken - The raw/normalizable JWT token.
      * @param header - The parsed JWT header (provides `kid`).
      * @param issuerProfile - Optional issuer profile; enables DID-document key resolution.
@@ -37,9 +46,13 @@ export class SignatureValidator {
             return { status: false, message: 'Invalid JWT token' };
         }
 
-        const result = isDidDocumentProfile(issuerProfile)
-            ? await this.verifyFromIssuerProfile(normalizedJwt, header, issuerProfile)
-            : await this.verifyFromHeaderPem(normalizedJwt, header);
+        // A pinned key takes priority — it works even when the issuer profile is
+        // unreachable. Null means none was configured/matched, so fall through.
+        const pinned = await this.verifyFromPinnedKey(normalizedJwt, header);
+        const result = pinned
+            ?? (isDidDocumentProfile(issuerProfile)
+                ? await this.verifyFromIssuerProfile(normalizedJwt, header, issuerProfile)
+                : await this.verifyFromHeaderPem(normalizedJwt, header));
 
         if (!result.status) {
             this.progressCallback(Stages.verification, Messages.VERIFICATION_FAILED, false, result.message);
@@ -47,6 +60,67 @@ export class SignatureValidator {
         }
         this.progressCallback(Stages.verification, Messages.VERIFICATION_SUCCESS, true, Messages.VERIFICATION_SUCCESS);
         return { status: true, message: Messages.VERIFICATION_SUCCESS };
+    }
+
+    /**
+     * Verification using a caller-pinned key from `config.offlinePublicKey`.
+     * Supports Ed25519 (jwk.x) for EdDSA and RSA PEM for RS256. Makes no network
+     * request, so it works fully offline.
+     * @returns The verification result, or null when no pinned key is configured or
+     * matches the header `kid` — signalling the caller to fall through to the
+     * issuer-profile / legacy paths.
+     */
+    private async verifyFromPinnedKey(normalizedJwt: string, header: Record<string, unknown>): Promise<{ status: boolean, message: string } | null> {
+        const kid = typeof header?.['kid'] === 'string' ? (header['kid'] as string) : '';
+        const match = matchOfflineVerificationKey(this.config?.offlinePublicKey, kid);
+        if (!match?.publicKey) {
+            return null;
+        }
+
+        // Procedure follows the RESOLVED KEY; token `alg` must be consistent with it.
+        const alg = typeof header?.['alg'] === 'string' ? (header['alg'] as string) : '';
+
+        if (isPemPublicKey(match.publicKey)) {
+            if (alg !== 'RS256') {
+                logger(`${LOG_PREFIX} alg mismatch: header alg="${alg}" but offlinePublicKey is RSA PEM (expected "RS256")`, 'warn');
+                return { status: false, message: Messages.ALG_KEY_MISMATCH };
+            }
+            logger(`${LOG_PREFIX} SD-JWT path: using caller-supplied offlinePublicKey PEM from config`);
+            return await this.verifyWithWebCrypto(normalizedJwt, match.publicKey);
+        }
+
+        if (alg !== 'EdDSA') {
+            logger(`${LOG_PREFIX} alg mismatch: header alg="${alg}" but offlinePublicKey is Ed25519 (expected "EdDSA")`, 'warn');
+            return { status: false, message: Messages.ALG_KEY_MISMATCH };
+        }
+
+        const parts = normalizedJwt.split('.');
+        if (parts.length !== 3) {
+            return { status: false, message: 'Invalid token format for signature verification' };
+        }
+
+        let pubKey: Uint8Array;
+        try {
+            pubKey = decodeBase64OrBase64Url(match.publicKey);
+            if (pubKey.length !== 32) {
+                logger(`${LOG_PREFIX} offlinePublicKey has unexpected length: ${pubKey.length} (expected 32)`, 'error');
+                return { status: false, message: 'Invalid offlinePublicKey length for Ed25519' };
+            }
+        } catch {
+            return { status: false, message: 'offlinePublicKey could not be decoded as base64/base64url' };
+        }
+
+        logger(`${LOG_PREFIX} SD-JWT path: using caller-supplied offlinePublicKey from config`);
+        const [headerB64, payloadB64, signatureB64] = parts;
+        try {
+            const isValid = verifyEddsaJwt(headerB64 ?? '', payloadB64 ?? '', signatureB64 ?? '', pubKey);
+            return {
+                status: isValid,
+                message: isValid ? Messages.VERIFICATION_SUCCESS : 'Signature verification failed - invalid signature',
+            };
+        } catch (error: any) {
+            return { status: false, message: `Error verifying EdDSA signature: ${error?.message}` };
+        }
     }
 
     /**

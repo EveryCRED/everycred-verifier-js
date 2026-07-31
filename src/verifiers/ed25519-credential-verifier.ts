@@ -3,7 +3,7 @@ import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, DEFAUL
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { VerificationConfig } from '../models/common.model';
-import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent } from "../utils/credential-util";
+import { deepCloneData, getDataFromAPI, getDataFromKey, isKeyPresent, isOnline } from "../utils/credential-util";
 import { logDiagnosticStep } from '../utils/helper';
 import { CredentialIssuerValidator } from "../validator/credential-issuer-validator";
 import { CredentialValidator } from "../validator/credential-validator";
@@ -40,16 +40,18 @@ export class Ed25519CredentialVerifier {
    * successful or not.
    * @param {any} certificate - The `certificate` parameter is an object that represents a certificate.
    * It is passed to the `verify` function for validation.
-   * @param [offChainVerification=false] - The `offChainVerification` parameter is a boolean flag that
-   * determines whether the verification process should be done off-chain or on-chain. If
-   * `offChainVerification` is set to `true`, the `verify` method will call the `offChainVerify` method.
+   * @param offChainVerification - Optional boolean flag choosing off-chain over on-chain
+   * verification. When omitted, the value supplied via `config.offChainVerification` is kept —
+   * previously the defaulted parameter always overwrote it, so callers that configured off-chain
+   * verification but did not also pass it positionally (including `EveryCredVerifier`) were
+   * silently forced on-chain.
    * @returns The function `verify` returns an object with the properties `message`, `status`, and
    * `networkName`. The values of these properties depend on the outcome of the validation process. If
    * all validations pass, the `message` property will be set to `Messages.VERIFIED`, the `status`
    * property will be set to `true`, and the `networkName` property will be set to the
    */
-  async verify(certificate: any, offChainVerification = false) {
-    this.offChainVerification = offChainVerification;
+  async verify(certificate: any, offChainVerification?: boolean) {
+    this.offChainVerification = offChainVerification ?? this.offChainVerification;
     this.certificate = deepCloneData(certificate);
 
     if (this.offChainVerification) {
@@ -148,7 +150,7 @@ export class Ed25519CredentialVerifier {
    * specifically the `revocationStatusValidation` property.
    */
   private async revocationStatusCheck(): Promise<boolean> {
-    if (this.offChainVerification && navigator.onLine) {
+    if (this.offChainVerification && isOnline()) {
       await this.fetchIssuerAndRevocationData();
     }
 

@@ -24,7 +24,7 @@ import {
   isKeyPresent,
   isObjectEmpty
 } from '../utils/credential-util';
-import { ed25519PublicKeyFromJwk, isDidDocumentProfile, resolveVerificationMethod } from '../utils/did-key-resolver';
+import { ed25519PublicKeyFromJwk, isDidDocumentProfile, resolveOfflinePublicKey, resolveVerificationMethod } from '../utils/did-key-resolver';
 import { logger } from '../utils/logger';
 
 export class MerkleProofValidator2019 {
@@ -47,6 +47,8 @@ export class MerkleProofValidator2019 {
    * @param {any} credentialData - The `credentialData` parameter is an object that contains the data
    * needed for the validation process. It is used as input for various validation checks and
    * verification steps within the `validate` function.
+   * @param offChainVerification - When true, the blockchain anchor lookup is skipped. The local
+   * Merkle checks are also skipped for Ed25519Signature2020 proofs, which do not depend on them.
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
@@ -62,30 +64,46 @@ export class MerkleProofValidator2019 {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, false, '');
     }
 
-    if (!offChainVerification) {
-      const checks = await Promise.all([
+    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
+    const isV2Context = contextData.some(str => str.endsWith("v2"));
+    const proofKey = isV2Context ? "cryptosuite" : "type";
+    const isEd25519Proof = this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020;
+
+    // The local Merkle checks need no network access. They always run on-chain, and
+    // off-chain they run only for MerkleProof2019 credentials: verifyMerkleProof()
+    // gates on the isMerkleProofVerified flag that verifyMerkleRootHash() sets, so
+    // skipping them off-chain made those credentials fail unconditionally.
+    // Ed25519Signature2020 credentials verify their signature directly and never read
+    // that flag, so their off-chain behaviour is deliberately left unchanged.
+    const checks: Promise<ResponseMessage>[] = [];
+
+    if (!offChainVerification || !isEd25519Proof) {
+      checks.push(
         this.checkDecodedAnchors(),
         this.checkDecodedPath(),
         this.checkDecodedMerkleRoot(),
         this.checkDecodedTargetHash(),
-        this.fetchDataFromBlockchainAPI(),
         this.verifyMerkleRootHash()
-      ]);
-      if (!checks.every(check => check.status)) {
-        return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
-      }
+      );
     }
 
-    let verificationStatus = false;
-    const contextData: string[] = getDataFromKey(this.credential, CREDENTIALS_VALIDATORS_KEYS.context);
-    const isV2Context = contextData.some(str => str.endsWith("v2"));
-    const proofKey = isV2Context ? "cryptosuite" : "type";
-
-    if (this.credential?.proof?.[proofKey] === ALGORITHM_TYPES.ED25519SIGNATURE2020) {
-      verificationStatus = (await this.verifyEd25519()).status;
+    // The blockchain anchor lookup is the only step needing an explorer/RPC call.
+    if (!offChainVerification) {
+      checks.push(this.fetchDataFromBlockchainAPI());
     } else {
-      verificationStatus = (await this.verifyMerkleProof()).status;
+      // fetchDataFromBlockchainAPI() is where networkName would normally be set, so
+      // derive it here to keep reporting it when the lookup is skipped.
+      this.networkName = this.resolveNetworkName();
     }
+
+    const results = await Promise.all(checks);
+    if (!results.every(check => check.status)) {
+      return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+    }
+
+    const verificationStatus = isEd25519Proof
+      ? (await this.verifyEd25519()).status
+      : (await this.verifyMerkleProof()).status;
 
     if (verificationStatus) {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_SUCCESS, true, this.networkName);
@@ -169,6 +187,14 @@ export class MerkleProofValidator2019 {
    * @returns The 32-byte public key, or null when it cannot be resolved.
    */
   private resolveEd25519PublicKey(verificationMethodRef: string): Uint8Array | null {
+    // Caller-pinned key takes priority: it requires no network access at all,
+    // so it works even when the issuer profile was never (and cannot be) fetched.
+    const pinnedKey = resolveOfflinePublicKey(this.config?.offlinePublicKey, verificationMethodRef);
+    if (pinnedKey) {
+      logger('[EveryCred:key-resolution] Ed25519 path: using caller-supplied offlinePublicKey from config', 'log');
+      return pinnedKey;
+    }
+
     if (isDidDocumentProfile(this.issuerProfileData)) {
       logger('[EveryCred:key-resolution] Ed25519 path: resolving key from DID-document issuer profile', 'log');
       const vm = resolveVerificationMethod(this.issuerProfileData, verificationMethodRef);
@@ -326,6 +352,31 @@ export class MerkleProofValidator2019 {
 
     this.progressCallback(Stages.checkDecodedTargetHash, Messages.TARGETHASH_DECODED_DATA_KEY_VALIDATE, false, Messages.TARGETHASH_DECODED_DATA_KEY_ERROR);
     return { message: Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, status: false };
+  }
+
+  /**
+   * Derives the network name from the credential's anchor string. This is a purely
+   * local lookup (anchor -> BASE_API + BASE_NETWORK), so it stays available when the
+   * blockchain call is skipped for off-chain verification.
+   * @returns The network name, or an empty string when the anchor cannot be resolved.
+   */
+  private resolveNetworkName(): string {
+    const anchorParts = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':') || [];
+    const blinkValue = getDataFromKey(anchorParts, ['1']);
+    const networkType = getDataFromKey(anchorParts, ['2']);
+
+    if (!blinkValue || !networkType) {
+      return '';
+    }
+
+    const baseAPIValue = getDataFromKey(BASE_API, blinkValue);
+    const baseNetworkValue = getDataFromKey(BASE_NETWORK, networkType);
+
+    if (!baseAPIValue || !baseNetworkValue) {
+      return '';
+    }
+
+    return `${baseAPIValue}${baseNetworkValue}`;
   }
 
   /**

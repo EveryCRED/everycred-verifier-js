@@ -1,6 +1,6 @@
 import nacl from 'tweetnacl';
 import naclUtil from 'tweetnacl-util';
-import { DidDocumentProfile, PublicKeyJwk, VerificationMethod } from '../models/common.model';
+import { DidDocumentProfile, OfflineVerificationKey, PublicKeyJwk, VerificationMethod } from '../models/common.model';
 import { base64UrlToArrayBuffer } from './jwt-utils';
 import { logger } from './logger';
 
@@ -18,7 +18,7 @@ const LOG_PREFIX = '[EveryCred:key-resolution]';
  * @param value - A base64 or base64url encoded string.
  * @returns The decoded bytes as a Uint8Array.
  */
-function decodeBase64OrBase64Url(value: string): Uint8Array {
+export function decodeBase64OrBase64Url(value: string): Uint8Array {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized.padEnd(
     normalized.length + ((4 - (normalized.length % 4)) % 4),
@@ -146,6 +146,84 @@ export function resolveVerificationMethod(
 
   logger(`${LOG_PREFIX} NO verificationMethod matched ref="${ref}"`, 'warn');
   return null;
+}
+
+/** True when `publicKey` is an RSA PEM (SPKI), not Ed25519 jwk.x material. */
+export function isPemPublicKey(publicKey: string): boolean {
+  return publicKey.includes('-----BEGIN');
+}
+
+/**
+ * Match a caller-pinned key from `config.offlinePublicKey` by id / fragment.
+ *
+ * Matching mirrors `resolveVerificationMethod`'s fragment-tolerant strategy: an
+ * entry whose `id` matches the reference (or its `#fragment`) wins; a lone entry
+ * with no `id` acts as a catch-all.
+ *
+ * @param configured - The `offlinePublicKey` config value (single entry or array).
+ * @param ref - The key reference from the credential (`proof.verificationMethod` or JWT `kid`).
+ * @returns The matched entry, or null when nothing is configured or matches.
+ */
+export function matchOfflineVerificationKey(
+  configured: OfflineVerificationKey | OfflineVerificationKey[] | undefined,
+  ref: string
+): OfflineVerificationKey | null {
+  if (!configured) {
+    return null;
+  }
+
+  const candidates = Array.isArray(configured) ? configured : [configured];
+  const fragmentOf = (value?: string): string | undefined =>
+    value && value.includes('#') ? value.split('#').pop() : value;
+  const refFragment = fragmentOf(ref);
+
+  const [onlyCandidate] = candidates;
+  const singleUnlabeledCandidate =
+    candidates.length === 1 && onlyCandidate && !onlyCandidate.id ? onlyCandidate : undefined;
+  const match =
+    candidates.find((k) => k.id && (k.id === ref || fragmentOf(k.id) === refFragment)) ??
+    singleUnlabeledCandidate;
+
+  return match?.publicKey ? match : null;
+}
+
+/**
+ * Resolve a caller-pinned Ed25519 public key from `config.offlinePublicKey`.
+ *
+ * Used for fully offline verification, where the issuer profile (DID document)
+ * cannot be fetched. PEM entries are skipped — use `matchOfflineVerificationKey`
+ * + the RS256 path for those.
+ *
+ * @param configured - The `offlinePublicKey` config value (single entry or array).
+ * @param ref - The key reference from the credential (`proof.verificationMethod` or JWT `kid`).
+ * @returns The 32-byte public key, or null when nothing is configured or matches.
+ */
+export function resolveOfflinePublicKey(
+  configured: OfflineVerificationKey | OfflineVerificationKey[] | undefined,
+  ref: string
+): Uint8Array | null {
+  const match = matchOfflineVerificationKey(configured, ref);
+  if (!match?.publicKey) {
+    return null;
+  }
+
+  // RSA PEM belongs on the RS256 path — do not try to decode it as Ed25519 jwk.x.
+  if (isPemPublicKey(match.publicKey)) {
+    return null;
+  }
+
+  try {
+    const bytes = decodeBase64OrBase64Url(match.publicKey);
+    if (bytes.length !== 32) {
+      logger(`${LOG_PREFIX} offlinePublicKey has unexpected length: ${bytes.length} (expected 32)`, 'error');
+      return null;
+    }
+    logger(`${LOG_PREFIX} using caller-supplied offlinePublicKey (id="${match.id ?? '<unlabeled>'}")`);
+    return bytes;
+  } catch (error) {
+    logger(`${LOG_PREFIX} offlinePublicKey could not be decoded as base64/base64url`, 'error');
+    return null;
+  }
 }
 
 /**

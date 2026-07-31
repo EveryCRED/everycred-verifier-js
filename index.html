@@ -1127,6 +1127,22 @@
             <p class="config-description">Perform verification without blockchain checks (faster but less secure)</p>
           </div>
           <div class="config-item">
+            <span class="config-checkbox-label">Offline Public Key (Ed25519)</span>
+            <p class="config-description" style="margin-left: 0; margin-bottom: 12px;">
+              Optional. Pins the issuer's public key so signature verification works even when the issuer
+              profile can't be fetched (e.g. offline). Applies to Ed25519-format credentials and EdDSA-signed
+              SD JWTs. Leave blank to resolve the key from the issuer profile / legacy embedded key as usual.
+            </p>
+            <div class="input-section" style="margin-bottom: 12px;">
+              <label for="configOfflineKeyId" style="font-size: 0.9em;">Verification Method Id (optional)</label>
+              <input type="text" id="configOfflineKeyId" class="url-input" placeholder="e.g. did:web:issuer.example#key-1 — omit if the issuer has a single key" autocomplete="off">
+            </div>
+            <div class="input-section">
+              <label for="configOfflinePublicKey" style="font-size: 0.9em;">Public Key (base64 / base64url, 32 bytes)</label>
+              <input type="text" id="configOfflinePublicKey" class="url-input" placeholder="Raw Ed25519 public key — not a JWK/PEM/DID document" autocomplete="off">
+            </div>
+          </div>
+          <div class="config-item">
             <label class="config-label">
               <input type="checkbox" id="configBlockchain" class="config-checkbox">
               <span class="config-checkbox-label">Blockchain Verification Enabled</span>
@@ -1139,7 +1155,7 @@
               Required for on-chain verification (v3.0.0+ no longer bundles keys). Supply your own keys below.
               Get them from <a href="https://etherscan.io/myapikey" target="_blank" rel="noopener">Etherscan</a> and
               <a href="https://polygonscan.com/myapikey" target="_blank" rel="noopener">Polygonscan</a>.
-              Polygon Amoy needs no key.
+              Polygon Amoy also uses the Etherscan key (via the v2 multichain endpoint).
             </p>
             <div class="input-section" style="margin-bottom: 12px;">
               <label for="configEthereumKey" style="font-size: 0.9em;">Ethereum (Etherscan) API Key</label>
@@ -1164,8 +1180,8 @@
               <span id="configStatus" class="config-status" aria-live="polite"></span>
             </div>
             <p class="config-description" style="margin-left: 0;">
-              Saves the checkbox settings above to this browser's <code>localStorage</code> so they persist across reloads.
-              API keys are <strong>session-only</strong> — held in <code>sessionStorage</code> for this tab and cleared when you close it.
+              Saves the checkbox settings and offline public key above to this browser's <code>localStorage</code> so they persist across reloads.
+              Blockchain explorer API keys are <strong>session-only</strong> — held in <code>sessionStorage</code> for this tab and cleared when you close it.
               Clear wipes both.
             </p>
           </div>
@@ -1518,6 +1534,8 @@ OR SD JWT format:
     const configSection = document.querySelector('.config-section');
     const configHeader = document.getElementById('configHeader');
     const configOffChain = document.getElementById('configOffChain');
+    const configOfflineKeyId = document.getElementById('configOfflineKeyId');
+    const configOfflinePublicKey = document.getElementById('configOfflinePublicKey');
     const configBlockchain = document.getElementById('configBlockchain');
     const configLogDiagnostic = document.getElementById('configLogDiagnostic');
     const configEthereumKey = document.getElementById('configEthereumKey');
@@ -1553,6 +1571,16 @@ OR SD JWT format:
         config.blockchainApiKeys = blockchainApiKeys;
       }
 
+      // Offline public key (Ed25519): pins the issuer's key so signature verification
+      // works without fetching the issuer profile. Only included when a key was entered.
+      const offlinePublicKeyValue = configOfflinePublicKey.value.trim();
+      if (offlinePublicKeyValue) {
+        const offlineKeyIdValue = configOfflineKeyId.value.trim();
+        config.offlinePublicKey = offlineKeyIdValue
+          ? { id: offlineKeyIdValue, publicKey: offlinePublicKeyValue }
+          : { publicKey: offlinePublicKeyValue };
+      }
+
       return config;
     }
 
@@ -1579,7 +1607,10 @@ OR SD JWT format:
       const data = {
         offChainVerification: configOffChain.checked,
         isBlockchainVerificationEnabled: configBlockchain.checked,
-        logDiagnosticStep: configLogDiagnostic.checked
+        logDiagnosticStep: configLogDiagnostic.checked,
+        // Public key material, not a secret — safe to persist alongside the checkbox prefs.
+        offlineKeyId: configOfflineKeyId.value.trim(),
+        offlinePublicKey: configOfflinePublicKey.value.trim()
       };
       try {
         localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data));
@@ -1614,6 +1645,8 @@ OR SD JWT format:
           if (typeof data.offChainVerification === 'boolean') configOffChain.checked = data.offChainVerification;
           if (typeof data.isBlockchainVerificationEnabled === 'boolean') configBlockchain.checked = data.isBlockchainVerificationEnabled;
           if (typeof data.logDiagnosticStep === 'boolean') configLogDiagnostic.checked = data.logDiagnosticStep;
+          if (typeof data.offlineKeyId === 'string') configOfflineKeyId.value = data.offlineKeyId;
+          if (typeof data.offlinePublicKey === 'string') configOfflinePublicKey.value = data.offlinePublicKey;
         }
       } catch (err) {
         console.error('Saved config is corrupt, ignoring:', err);
@@ -1642,6 +1675,8 @@ OR SD JWT format:
       }
       configEthereumKey.value = '';
       configPolygonKey.value = '';
+      configOfflineKeyId.value = '';
+      configOfflinePublicKey.value = '';
       showConfigStatus('✓ Saved config cleared', 'info');
     }
 

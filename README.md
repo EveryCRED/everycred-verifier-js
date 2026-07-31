@@ -44,6 +44,7 @@ The `EveryCredVerifier` constructor accepts a `VerificationConfig` object with t
   Each network entry declares which key it needs, so you only have to provide the keys for the networks your credentials actually use. Networks reached over the Etherscan v2 endpoint are distinguished by their `chainId`.
 
   > **Breaking change (v3.0.0):** API keys are no longer shipped with the package. On-chain verification will fail with a clear error (`Failed to retrieve URL or API key from the matched API.`) unless you provide your own keys via `blockchainApiKeys`. Off-chain verification is unaffected. **Never hardcode these keys** — load them from environment variables or a secrets manager.
+- `offlinePublicKey` (object or array, optional): A caller-pinned Ed25519 public key (or keys) used to verify the signature when the issuer profile cannot be fetched (e.g. `offChainVerification` with no network access). Applies to **Ed25519-format** credentials and to **EdDSA-signed SD JWT** credentials. See [Offline signature verification](#offline-signature-verification-offlinepublickey) below.
 
 ## On-Chain Verification
 
@@ -133,6 +134,33 @@ const verificationResult = await verifier.verify(certificate);
 ```
 
 This code snippet creates an instance of EveryCredVerifier with the `offChainVerification` flag set to `true` in the configuration object. It then calls the verify method with the certificate object. By default, `offChainVerification` is set to `false` for on-chain verification.
+
+### Offline Signature Verification (`offlinePublicKey`)
+
+For credentials whose issuer uses a DID-document profile (`verificationMethod[].publicKeyJwk`), signature verification normally resolves the public key from that profile — which requires fetching it over the network. In a genuinely offline scenario (no network access at all, e.g. a QR-code scan with no connectivity), that fetch isn't possible, so the key must be supplied up front.
+
+`offlinePublicKey` lets you pin the raw Ed25519 public key(s) you trust, instead of the whole issuer profile — kept intentionally minimal (a 32-byte key rather than a full JSON/DID document) so it's cheap to carry in size-constrained transports such as a CBOR-encoded payload:
+
+```typescript
+const verifier = new EveryCredVerifier(progressCallback, {
+    offChainVerification: true,
+    offlinePublicKey: {
+        // Optional: matches proof.verificationMethod (or its '#fragment').
+        // Omit when the issuer has a single key.
+        id: 'did:web:issuer.example#key-1',
+        // Raw Ed25519 public key (32 bytes), base64 or base64url encoded.
+        publicKey: 'MCowBQYDK2VwAyEA...', // example only
+    },
+});
+
+const verificationResult = await verifier.verify(certificate, true);
+```
+
+Multiple keys (e.g. an issuer with several active signing keys) can be supplied as an array; the matching `id` (or its `#fragment`) is used to pick the right one. When `offlinePublicKey` is not supplied, the verifier falls back to resolving the key from the issuer profile (if reachable) or the legacy embedded-key format.
+
+For **SD JWT** credentials the same option applies, matched against the JWT header's `kid`. Because the pinned key is always Ed25519, the token must be `EdDSA`-signed — an `RS256` token with a pinned key is rejected as an algorithm mismatch rather than silently verified. RS256 SD JWTs carry their PEM key inside the `kid` itself, so they already verify without any network access and need no pinned key.
+
+> **What `offChainVerification` does and does not skip:** it skips **blockchain anchor lookups only**. The issuer-profile and revocation-list fetches are ordinary HTTP requests, so they are attempted whenever the environment reports connectivity, independent of this flag. When the environment reports being offline, those fetches are skipped and revocation falls back to validity-date checks only — supply `offlinePublicKey` so signature verification still succeeds in that case.
 
 ## SD JWT Credential Format
 

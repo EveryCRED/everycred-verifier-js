@@ -63,13 +63,34 @@ export interface DidDocumentProfile {
  * Blockchain explorer API keys supplied by the consumer at runtime.
  * Keys are NEVER bundled with the library — the caller must provide their own.
  * - `ethereum`: Etherscan API key. Used for Ethereum Mainnet, Ethereum Sepolia,
- *   and Polygon Mainnet (which is queried through the Etherscan v2 multichain endpoint).
+ *   and for Polygon Mainnet and Polygon Amoy (both queried through the Etherscan
+ *   v2 multichain endpoint, distinguished by `chainId`).
  * - `polygon`: Polygonscan API key. Used for Polygon Testnet.
- * Polygon Amoy is accessed via a public RPC endpoint and requires no key.
  */
 export interface BlockchainApiKeys {
   ethereum?: string;
   polygon?: string;
+}
+
+/**
+ * A caller-pinned Ed25519 public key for fully offline verification, used when
+ * the issuer profile (DID document) cannot be fetched — e.g. `offChainVerification`
+ * with no network access. This is intentionally minimal (a raw key, not a whole
+ * issuer profile/DID document) so it stays cheap to carry in size-constrained
+ * transports such as a CBOR-encoded QR payload.
+ */
+export interface OfflineVerificationKey {
+  /**
+   * Matches the credential's `proof.verificationMethod` / JWT `kid` (or its `#fragment`).
+   * Omit when the issuer has a single key and no disambiguation is needed.
+   */
+  id?: string;
+  /**
+   * Key material:
+   * - Ed25519: base64/base64url `jwk.x` (32 bytes) — JSON-LD Ed25519 or SD-JWT EdDSA
+   * - RSA: PEM string (`-----BEGIN PUBLIC KEY-----...`) — SD-JWT RS256
+   */
+  publicKey: string;
 }
 
 export interface VerificationConfig {
@@ -77,6 +98,8 @@ export interface VerificationConfig {
   isBlockchainVerificationEnabled?: boolean
   logDiagnosticStep?: boolean
   blockchainApiKeys?: BlockchainApiKeys
+  /** Pinned key(s) for offline signature verification. See `OfflineVerificationKey`. */
+  offlinePublicKey?: OfflineVerificationKey | OfflineVerificationKey[]
 }
 
 export interface SDCredentialInput {

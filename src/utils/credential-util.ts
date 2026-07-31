@@ -107,6 +107,25 @@ export function isValidURL(url: string): boolean {
 }
 
 /**
+ * Reports whether network access is believed to be available.
+ *
+ * `navigator.onLine` is a browser-only API: in Node/server contexts `navigator`
+ * either does not exist or has no `onLine` member, so reading it yields
+ * `undefined`. Treating that as "offline" would silently skip network-dependent
+ * security checks (notably the revocation-list fetch), which is fail-open — a
+ * revoked credential would verify as valid. So an unknown state is treated as
+ * ONLINE, and only an explicit `navigator.onLine === false` means offline.
+ *
+ * @returns False only when the environment explicitly reports being offline.
+ */
+export function isOnline(): boolean {
+  if (typeof navigator === 'undefined' || typeof navigator.onLine !== 'boolean') {
+    return true;
+  }
+  return navigator.onLine;
+}
+
+/**
  * The function checks if a given date is in the future.
  * @param {string} dateString - The `dateString` parameter is a string representing a date. It should
  * be in a format that can be parsed by the `Date` constructor, such as "YYYY-MM-DD" or "MM/DD/YYYY".

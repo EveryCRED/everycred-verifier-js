@@ -13,7 +13,8 @@ import {
   getDataFromKey,
   isDateExpired,
   isFutureDate,
-  isKeyPresent
+  isKeyPresent,
+  isOnline
 } from "../utils/credential-util";
 
 export class RevocationStatusCheck {
@@ -69,7 +70,7 @@ export class RevocationStatusCheck {
    * @returns The `statusRevocationCheck` method returns a boolean value.
    */
   private async statusRevocationCheck(): Promise<boolean> {
-    if (!navigator.onLine) {
+    if (!isOnline()) {
       this.progressCallback(Stages.revocationStatusCheck, Messages.OFFLINE_STATUS_CHECK, true, Messages.SKIP_REVOCATION_STATUS_CHECK);
       return await this.checkValidityDates();
     }

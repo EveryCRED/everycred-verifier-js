@@ -98,8 +98,8 @@ and 'provider' indicating which runtime-supplied API key to use for authenticati
 API keys are NEVER stored here — they are provided by the consumer via
 `VerificationConfig.blockchainApiKeys` and resolved at request time.
 Use these APIs to interact with Ethereum Mainnet, Ethereum Sepolia, Polygon Mainnet, Polygon Testnet, and Polygon Amoy.
-The 'provider' field maps to a key on `BlockchainApiKeys`. Polygon Amoy uses a public RPC
-endpoint and therefore has no provider (no API key required). */
+The 'provider' field maps to a key on `BlockchainApiKeys`. Every entry currently declares a
+provider, so all networks require a caller-supplied key; entries without one would need none. */
 export const BLOCKCHAIN_API_LIST: ReadonlyArray<{
   id: string;
   chainId: number;
@@ -113,7 +113,7 @@ export const BLOCKCHAIN_API_LIST: ReadonlyArray<{
   { id: 'ethereumSepolia', chainId: 11155111, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' },
   { id: 'polygonMainnet', chainId: 137, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' }, // queried via Etherscan v2 multichain endpoint
   { id: 'polygonTestnet', chainId: 80001, url: 'https://api-testnet.polygonscan.com/', provider: 'polygon' },
-  { id: 'polygonAmoy', chainId: 80002, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' }, // public RPC, no API key required
+  { id: 'polygonAmoy', chainId: 80002, url: 'https://api.etherscan.io/v2/', provider: 'ethereum' }, // queried via Etherscan v2 multichain endpoint (needs the ethereum key)
 ];
 
 /* The `export enum BASE_API` is defining an enumeration called `BASE_API` that represents different
@@ -283,7 +283,7 @@ export const SD_CREDENTIALS_CONSTANTS = {
   revocation_list_type_supported: 'RevocationList',
 };
 
-export const DEFAULT_CONFIG: Required<VerificationConfig> = {
+export const DEFAULT_CONFIG: Required<Omit<VerificationConfig, 'offlinePublicKey'>> & Pick<VerificationConfig, 'offlinePublicKey'> = {
   offChainVerification: false,
   isBlockchainVerificationEnabled: true,
   logDiagnosticStep: false,

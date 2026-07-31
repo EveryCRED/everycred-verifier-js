@@ -43,10 +43,12 @@ export class SdMerkleProofValidator2019 {
    * @param {any} credentialData - The `credentialData` parameter is an object that contains the data
    * needed for the validation process. It is used as input for various validation checks and
    * verification steps within the `validate` function.
+   * @param offChainVerification - When true, the blockchain anchor lookup is skipped;
+   * all local integrity checks still run.
    * @returns The function `validate` returns a promise that resolves to an object with the following
    * properties: `message` (string), `status` (boolean), and `networkName` (string).
    */
-  async validate(credentialData: any): Promise<NetworkResponseStatus> {
+  async validate(credentialData: any, offChainVerification: boolean = false): Promise<NetworkResponseStatus> {
     await this.getData(credentialData);
 
     const evidenceData = getDataFromKey(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.evidence);
@@ -61,17 +63,30 @@ export class SdMerkleProofValidator2019 {
       return this.createResponse(Stages.dataIntegrityCheck, Messages.FETCHING_NORMALIZED_DECODED_DATA_ERROR, false, '');
     }
 
-      const checks = await Promise.all([
-        this.checkDecodedAnchors(),
-        this.checkDecodedPath(),
-        this.checkDecodedMerkleRoot(),
-        this.checkDecodedTargetHash(),
-        this.fetchDataFromBlockchainAPI(),
-        this.verifyMerkleRootHash()
-      ]);
-      if (!checks.every(check => check.status)) {
-        return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
-      }
+    // The local integrity checks need no network access, so they always run —
+    // including verifyMerkleRootHash(), whose result verifyMerkleProof() depends on.
+    const checks = [
+      this.checkDecodedAnchors(),
+      this.checkDecodedPath(),
+      this.checkDecodedMerkleRoot(),
+      this.checkDecodedTargetHash(),
+      this.verifyMerkleRootHash()
+    ];
+
+    // The blockchain anchor lookup is the only step that requires an explorer/RPC
+    // call, so it is the only one skipped for off-chain verification.
+    if (!offChainVerification) {
+      checks.push(this.fetchDataFromBlockchainAPI());
+    } else {
+      // fetchDataFromBlockchainAPI() is where networkName would normally be set, so
+      // derive it here to keep reporting it when the lookup is skipped.
+      this.networkName = this.resolveNetworkName();
+    }
+
+    const results = await Promise.all(checks);
+    if (!results.every(check => check.status)) {
+      return this.createResponse(Stages.dataIntegrityCheck, Messages.DATA_INTEGRITY_CHECK_FAILED, false, '');
+    }
 
     const verificationStatus = (await this.verifyMerkleProof()).status;
     if (verificationStatus) {
@@ -248,6 +263,31 @@ export class SdMerkleProofValidator2019 {
 
     this.progressCallback(Stages.checkDecodedTargetHash, Messages.TARGETHASH_DECODED_DATA_KEY_VALIDATE, false, Messages.TARGETHASH_DECODED_DATA_KEY_ERROR);
     return { message: Messages.TARGETHASH_DECODED_DATA_KEY_ERROR, status: false };
+  }
+
+  /**
+   * Derives the network name from the credential's anchor string. This is a purely
+   * local lookup (anchor -> BASE_API + BASE_NETWORK), so it stays available when the
+   * blockchain call is skipped for off-chain verification.
+   * @returns The network name, or an empty string when the anchor cannot be resolved.
+   */
+  private resolveNetworkName(): string {
+    const anchorParts = getDataFromKey(this.decodedData?.anchors, ['0'])?.split(':') || [];
+    const blinkValue = getDataFromKey(anchorParts, ['1']);
+    const networkType = getDataFromKey(anchorParts, ['2']);
+
+    if (!blinkValue || !networkType) {
+      return '';
+    }
+
+    const baseAPIValue = getDataFromKey(BASE_API, blinkValue);
+    const baseNetworkValue = getDataFromKey(BASE_NETWORK, networkType);
+
+    if (!baseAPIValue || !baseNetworkValue) {
+      return '';
+    }
+
+    return `${baseAPIValue}${baseNetworkValue}`;
   }
 
   /**

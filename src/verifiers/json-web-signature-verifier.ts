@@ -3,7 +3,7 @@ import { CREDENTIALS_ISSUER_VALIDATORS_KEYS, CREDENTIALS_VALIDATORS_KEYS, DEFAUL
 import { Messages } from '../constants/messages';
 import { Stages } from '../constants/stages';
 import { SDCredentialInput, VerificationConfig } from '../models/common.model';
-import { getDataFromAPI, getDataFromKey, hasEvidence, isKeyPresent } from '../utils/credential-util';
+import { getDataFromAPI, getDataFromKey, hasEvidence, isKeyPresent, isOnline } from '../utils/credential-util';
 import { logDiagnosticStep } from '../utils/helper';
 import { extractAndNormalizeJwt, parseJwtToken } from '../utils/jwt-utils';
 import { RevocationStatusCheck } from '../validator/revocation-status-check';
@@ -236,10 +236,11 @@ export class JsonWebSignatureVerifier {
   /**
    * Validates the credential checksum using Merkle proof validation.
    * Uses SdMerkleProofValidator2019 to verify the credential integrity on blockchain.
+   * The off-chain flag is forwarded so the blockchain anchor lookup can be skipped.
    * @returns A promise resolving to true if checksum validation passes, false otherwise.
    */
   private async validateChecksum(): Promise<boolean> {
-    const validate = await new SdMerkleProofValidator2019(this.progressCallback, this.config).validate(this.credential);
+    const validate = await new SdMerkleProofValidator2019(this.progressCallback, this.config).validate(this.credential, this.offChainVerification);
     this.isChecksumValidated = validate?.status;
     this.networkName = validate.networkName ?? '';
     return this.isChecksumValidated;
@@ -247,11 +248,16 @@ export class JsonWebSignatureVerifier {
 
   /**
    * Checks the revocation status of the credential.
-   * Fetches issuer and revocation data if online and not in off-chain mode, then performs validation.
+   *
+   * The revocation list is a plain HTTP resource, not blockchain data, so the fetch
+   * is gated on connectivity alone — NOT on `offChainVerification`, which only means
+   * "skip blockchain anchor lookups". Gating it on the off-chain flag left
+   * `revocationListData` empty while still online, which RevocationStatusCheck
+   * (correctly) treats as an unfetchable list and fails on.
    * @returns A promise resolving to true if credential is not revoked, false otherwise.
    */
   private async revocationStatusCheck(): Promise<boolean> {
-    if (!this.offChainVerification && navigator.onLine) {
+    if (isOnline()) {
       await this.fetchIssuerAndRevocationData();
     }
 
@@ -277,11 +283,15 @@ export class JsonWebSignatureVerifier {
   /**
    * Fetches the issuer profile (from credential.issuer.profile) once and caches it.
    * Used by both signature verification (DID-document key resolution) and the
-   * revocation step. Failures are swallowed so signature verification can fall
-   * back to the legacy header-embedded key path.
+   * revocation step. Skipped entirely when offline; failures are swallowed so
+   * signature verification can fall back to a pinned key (`config.offlinePublicKey`)
+   * or the legacy header-embedded key path.
    */
   private async ensureIssuerProfileData(): Promise<void> {
     if (this.issuerProfileData && Object.keys(this.issuerProfileData).length) {
+      return;
+    }
+    if (!isOnline()) {
       return;
     }
     if (!isKeyPresent(this.credential, SD_CREDENTIAL_VALIDATORS_KEYS.issuer)) {
@@ -318,7 +328,7 @@ export class JsonWebSignatureVerifier {
    */
   private async verifySignature(): Promise<boolean> {
     await this.ensureIssuerProfileData();
-    const signatureValidator = new SignatureValidator(this.progressCallback);
+    const signatureValidator = new SignatureValidator(this.progressCallback, this.config);
     const signatureValidationResult = await signatureValidator.validate(this.jwtToken, this.header, this.issuerProfileData);
     const status = signatureValidationResult?.status;
     if (!status) {
